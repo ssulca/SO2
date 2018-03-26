@@ -1,6 +1,4 @@
-
 * Version 1
-* [Learn Markdown](https://bitbucket.org/tutorials/markdowndemo)
 
 # Proyecto Final Electronica Digital III
 
