@@ -1,0 +1,15 @@
+# Byte-compiled / optimized / DLL files
+
+
+#IDE
+*.iml
+.idea/
+*.xml
+
+
+#CMAKE
+cmake-build-debug/
+CMakeLists.txt
+
+#carpetas auxiliares
+sockets/
