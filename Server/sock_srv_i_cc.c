@@ -61,10 +61,15 @@ int main( int argc, char *argv[] ) {
 
 		if ( pid == 0 ) {  // Proceso hijo
 			close( sockfd );
-            dup2( newsockfd, STDOUT_FILENO );  /* duplicate socket on stdout */
-            dup2( newsockfd, STDERR_FILENO );  /* duplicate socket on stderr too */
+            if (dup2( newsockfd, STDOUT_FILENO )<0) {  /* duplicate socket on stdout */
+                perror( "dup2" );
+                exit( 1 );
+            }
+            if(dup2( newsockfd, STDERR_FILENO )<0){  /* duplicate socket on stderr too */
+                perror( "dup2" );
+                exit( 1 );
+            }
             close( newsockfd );  /* can close the original after it's duplicated */
-            printf("llegue aqui");
             execvp( cmd, cmd_args );   /* execvp() the command */
 			/*while ( 1 ) {
 				memset( buffer, 0, TAM );
