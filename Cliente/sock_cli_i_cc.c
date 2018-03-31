@@ -8,13 +8,17 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-#include <unistd.h> /*declaraciones de las funciones rear and write*/
+/*declaraciones de las funciones rear and write*/
+#include <unistd.h>
 
-#define Bufsize 256
+#define Bufsize 512
 
 int main( int argc, char *argv[] ) {
-    int sockfd, puerto, n; /* file descriptor del socket, puerto de conxion*/
-    struct sockaddr_in serv_addr; /* Estructura del socket del cliente*/
+    /* file descriptor del socket, puerto de conxion*/
+    int sockfd, puerto, n;
+    /* Estructura del socket del cliente*/
+    struct sockaddr_in serv_addr;
+    /* structura, contiene datos del host remoto*/
     struct hostent *server;
     int terminar = 0;
 
@@ -35,24 +39,21 @@ int main( int argc, char *argv[] ) {
         perror( "ERROR apertura de socket" );
         exit( 1 );
     }
-    /*Obtencion del hostname pasado por agumento */
+    /*nombre del host que resuelve DNS por IP pasada por argv*/
     server = gethostbyname( argv[1] );
     if (server == NULL) {
         fprintf( stderr,"Error, no existe el host\n" );
         exit( 0 );
     }
-    /* inicializacion de los valores de la estructura socket cliente*/
-    memset( (char *) &serv_addr, '0', sizeof(serv_addr) ); /*todos los valores en cero*/
-    serv_addr.sin_family = AF_INET; /* */
-    bcopy( (char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length );
-    serv_addr.sin_port = htons( puerto ); /*especifico cero para que el sistema me asigne */
 
-    /*uso bind para que el SO me asigne un nuevo puerto
-    if ( bind(sockfd, ( struct sockaddr *) &serv_addr, sizeof( serv_addr ) ) < 0 ) {
-        perror( "ligadura error al construir socket cliente" );
-        exit( 1 );
-    }
-    printf("cli port = %d\n", ntohs(serv_addr.sin_port));*/
+    /* Limpieza de la estructura */
+    memset( (char *) &serv_addr, '0', sizeof(serv_addr) ); /*todos los valores en cero*/
+    /* Carga de la familia de direccioens */
+    serv_addr.sin_family = AF_INET;
+    bcopy( (char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length );
+    /* Carga del número de puerto format big Endian*/
+    serv_addr.sin_port = htons( puerto );
+
 
     if ( connect( sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr ) ) < 0 ) {
         perror( "conexion" );
@@ -82,7 +83,7 @@ int main( int argc, char *argv[] ) {
             perror( "lectura de socket" );
             exit( 1 );
         }
-        printf( "Respuesta: %s\n", buffer );
+        printf( "Respuesta %i: %s\n",n, buffer );
         if( terminar ) {
             printf( "Finalizando ejecución\n" );
             exit(0);
