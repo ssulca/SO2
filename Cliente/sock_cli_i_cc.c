@@ -11,7 +11,13 @@
 /*declaraciones de las funciones rear and write*/
 #include <unistd.h>
 
-#define Bufsize 512
+#define BUFSIZE 512
+#define PROMBUF 256
+#define USERBUF 32
+#define IPBUF 15
+#define PORTBUF 6
+
+int command(char* u, char* i, char* p);
 
 int main( int argc, char *argv[] ) {
     /* file descriptor del socket, puerto de conxion*/
@@ -22,13 +28,19 @@ int main( int argc, char *argv[] ) {
     struct hostent *server;
     int terminar = 0;
 
-    char buffer[Bufsize];
-    if ( argc < 3 ) {
-        fprintf( stderr, "Uso %s host puerto\n", argv[0]);
-        exit( 0 );
-    }
+    char buffer[BUFSIZE];
 
-    puerto = atoi( argv[2] ); /* convierto numero entero*/
+    /*nuevos varaibles */
+    char user[USERBUF];
+    char ip[IPBUF];
+    char port[PORTBUF];
+
+    do{
+        terminar = command(user, ip, port);
+    }while (terminar != 0);
+
+
+    puerto = atoi( port ); /* convierto numero entero*/
     if (puerto == 0){
         perror("Error al convertir el puerto");
         exit(1);
@@ -40,7 +52,8 @@ int main( int argc, char *argv[] ) {
         exit( 1 );
     }
     /*nombre del host que resuelve DNS por IP pasada por argv*/
-    server = gethostbyname( argv[1] );
+    server = gethostbyname( ip );
+
     if (server == NULL) {
         fprintf( stderr,"Error, no existe el host\n" );
         exit( 0 );
@@ -62,8 +75,8 @@ int main( int argc, char *argv[] ) {
 
     while(1) {
         printf( "Ingrese el mensaje a transmitir: " );
-        memset( buffer, '\0', Bufsize );
-        fgets( buffer, Bufsize-1, stdin );
+        memset( buffer, '\0', BUFSIZE );
+        fgets( buffer, BUFSIZE-1, stdin );
 
         n = write( sockfd, buffer, strlen(buffer) );
         if ( n < 0 ) {
@@ -77,8 +90,8 @@ int main( int argc, char *argv[] ) {
             terminar = 1;
         }
 
-        memset( buffer, '\0', Bufsize );
-        n = read( sockfd, buffer, Bufsize );
+        memset( buffer, '\0', BUFSIZE );
+        n = read( sockfd, buffer, BUFSIZE );
         if ( n < 0 ) {
             perror( "lectura de socket" );
             exit( 1 );
@@ -89,5 +102,49 @@ int main( int argc, char *argv[] ) {
             exit(0);
         }
     }
+
+
+    return 0;
+}
+
+int command(char* u, char* i, char* p){
+    char prompt[PROMBUF];
+    char *user;
+    char *ip;
+    char *port;
+
+    printf("prompt > ");
+    fgets(prompt,PROMBUF, stdin);
+    if (strstr(prompt, "connect") == NULL){
+        perror("Comando no reconocido");
+        return -1;
+    }
+    user = strstr(prompt, " " );
+    if (user == NULL){
+        perror("usuario");
+        return -1;
+    }
+    user = user+1;
+    ip = strstr(prompt, "@" );
+    if(ip == NULL){
+        perror("ip");
+        return -1;
+    }
+    port = strstr(prompt, ":" );
+    if(port == NULL){
+        perror("puerto");
+        return -1;
+    }
+
+    *ip = '\0';
+    *port = '\0';
+
+    ip = ip+1;
+    port = port+1;
+
+    strcpy(u,user);
+    strcpy(i,ip);
+    strcpy(p,port);
+
     return 0;
 }
