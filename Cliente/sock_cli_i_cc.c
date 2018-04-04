@@ -18,96 +18,74 @@
 #define PORTBUF 6
 
 int command(char* u, char* i, char* p);
+void xfer_data(int srcfd, int tgtfd);
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
     /* file descriptor del socket, puerto de conxion*/
     int sockfd, puerto, n;
-    /* Estructura del socket del cliente*/
+    /* Estructura del socket del serv*/
     struct sockaddr_in serv_addr;
     /* structura, contiene datos del host remoto*/
     struct hostent *server;
     int terminar = 0;
 
     char buffer[BUFSIZE];
-
     /*nuevos varaibles */
     char user[USERBUF];
     char ip[IPBUF];
     char port[PORTBUF];
 
-    do{
+    do
+    {
         terminar = command(user, ip, port);
-    }while (terminar != 0);
-
-
-    puerto = atoi( port ); /* convierto numero entero*/
-    if (puerto == 0){
+    }
+    while (terminar != 0);
+    /* convierto numero entero*/
+    puerto = atoi( port );
+    if (puerto == 0)
+    {
         perror("Error al convertir el puerto");
         exit(1);
     }
     /*creacion del socket */
     sockfd = socket( AF_INET, SOCK_STREAM, 0 );
-    if ( sockfd < 0 ){
+    if ( sockfd < 0 )
+    {
         perror( "ERROR apertura de socket" );
         exit( 1 );
     }
-    /*nombre del host que resuelve DNS por IP pasada por argv*/
+    /*nombre del host que resuelve DNS por IP pasada*/
     server = gethostbyname( ip );
 
-    if (server == NULL) {
+    if (server == NULL)
+    {
         fprintf( stderr,"Error, no existe el host\n" );
         exit( 0 );
     }
 
-    /* Limpieza de la estructura */
-    memset( (char *) &serv_addr, '0', sizeof(serv_addr) ); /*todos los valores en cero*/
+    /* Limpieza de la estructura todos los valores en cero*/
+    memset( (char *) &serv_addr, '0', sizeof(serv_addr) );
     /* Carga de la familia de direccioens */
     serv_addr.sin_family = AF_INET;
-    bcopy( (char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length );
+    /* function copies n bytes de la direccion from server to socket local */
+    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, (size_t)server->h_length );
     /* Carga del número de puerto format big Endian*/
     serv_addr.sin_port = htons( puerto );
 
-
-    if ( connect( sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr ) ) < 0 ) {
+    if ( connect( sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr )) < 0)
+    {
         perror( "conexion" );
         exit( 1 );
     }
 
-    while(1) {
-        printf( "Ingrese el mensaje a transmitir: " );
-        memset( buffer, '\0', BUFSIZE );
-        fgets( buffer, BUFSIZE-1, stdin );
-
-        n = write( sockfd, buffer, strlen(buffer) );
-        if ( n < 0 ) {
-            perror( "escritura de socket" );
-            exit( 1 );
-        }
-
-        // Verificando si se escribió: fin
-        buffer[strlen(buffer)-1] = '\0';
-        if( !strcmp( "fin", buffer ) ) {
-            terminar = 1;
-        }
-
-        memset( buffer, '\0', BUFSIZE );
-        n = read( sockfd, buffer, BUFSIZE );
-        if ( n < 0 ) {
-            perror( "lectura de socket" );
-            exit( 1 );
-        }
-        printf( "Respuesta %i: %s\n",n, buffer );
-        if( terminar ) {
-            printf( "Finalizando ejecución\n" );
-            exit(0);
-        }
-    }
-
+    xfer_data(fileno(stdin), sockfd);
 
     return 0;
 }
 
-int command(char* u, char* i, char* p){
+int command(char* u, char* i, char* p)
+{
     char prompt[PROMBUF];
     char *user;
     char *ip;
@@ -115,23 +93,27 @@ int command(char* u, char* i, char* p){
 
     printf("prompt > ");
     fgets(prompt,PROMBUF, stdin);
-    if (strstr(prompt, "connect") == NULL){
+    if (strstr(prompt, "connect") == NULL)
+    {
         perror("Comando no reconocido");
         return -1;
     }
     user = strstr(prompt, " " );
-    if (user == NULL){
+    if (user == NULL)
+    {
         perror("usuario");
         return -1;
     }
     user = user+1;
     ip = strstr(prompt, "@" );
-    if(ip == NULL){
+    if(ip == NULL)
+    {
         perror("ip");
         return -1;
     }
     port = strstr(prompt, ":" );
-    if(port == NULL){
+    if(port == NULL)
+    {
         perror("puerto");
         return -1;
     }
@@ -147,4 +129,22 @@ int command(char* u, char* i, char* p){
     strcpy(p,port);
 
     return 0;
+}
+
+/*
+ * fileno() Devuelve el número de descriptor de archivo asociado
+ *
+ */
+void xfer_data(int srcfd, int tgtfd)
+{
+    char buf[1024];
+    int cnt, len;
+    /* leer desde el archivo stdin y escribir el archivo de stdout  */
+    while((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
+    {
+        if(len < 0)
+            perror("helper.c:xfer_data:read");
+        if((len = (int)write(tgtfd, buf, cnt)) != cnt)
+            perror("helper.c:xfer_data:write");
+    }
 }
