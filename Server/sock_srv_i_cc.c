@@ -91,8 +91,13 @@ int main( int argc, char *argv[] ) {
 				}
 
 			}*/
-            xfer_data(newsockfd, fileno(stdout));
-		}
+
+            for (int o =0;o<10;o++)
+            {
+                xfer_data(newsockfd, fileno(stdout));
+                xfer_data(fileno(stdin),newsockfd);
+            }
+        }
 		else
         {
 			printf( "SERVIDOR: Nuevo cliente, que atiende el proceso hijo: %d\n", pid);
@@ -107,7 +112,7 @@ void xfer_data(int srcfd, int tgtfd)
     char buf[1024];
     int cnt, len;
     /* leer desde el archivo stdin y escribir el archivo de stdout  */
-    while((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
+    if((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
     {
         if(len < 0)
             perror("helper.c:xfer_data:read");

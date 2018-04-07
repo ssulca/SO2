@@ -78,9 +78,11 @@ int main( int argc, char *argv[] )
         perror( "conexion" );
         exit( 1 );
     }
-
-    xfer_data(fileno(stdin), sockfd);
-
+    for (int o =0;o<10;o++)
+    {
+        xfer_data(fileno(stdin), sockfd);
+        xfer_data(sockfd,fileno(stdout));
+    }
     return 0;
 }
 
@@ -140,7 +142,7 @@ void xfer_data(int srcfd, int tgtfd)
     char buf[1024];
     int cnt, len;
     /* leer desde el archivo stdin y escribir el archivo de stdout  */
-    while((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
+    if((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
     {
         if(len < 0)
             perror("helper.c:xfer_data:read");
