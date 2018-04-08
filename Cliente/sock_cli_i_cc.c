@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-/*declaraciones de las funciones rear and write*/
+/*declaraciones de las funciones rear and write */
 #include <unistd.h>
 
 #define BUFSIZE 512
@@ -23,7 +23,7 @@ void xfer_data(int srcfd, int tgtfd);
 int main( int argc, char *argv[] )
 {
     /* file descriptor del socket, puerto de conxion*/
-    int sockfd, puerto, n;
+    int sockfd, puerto, readbytes;
     /* Estructura del socket del serv*/
     struct sockaddr_in serv_addr;
     /* structura, contiene datos del host remoto*/
@@ -36,21 +36,21 @@ int main( int argc, char *argv[] )
     char ip[IPBUF];
     char port[PORTBUF];
 
-    do
-    {
+    do {
         terminar = command(user, ip, port);
     }
     while (terminar != 0);
+
     /* convierto numero entero*/
-    puerto = atoi( port );
+    puerto = atoi(port);
     if (puerto == 0)
     {
         perror("Error al convertir el puerto");
         exit(1);
     }
     /*creacion del socket */
-    sockfd = socket( AF_INET, SOCK_STREAM, 0 );
-    if ( sockfd < 0 )
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sockfd < 0)
     {
         perror( "ERROR apertura de socket" );
         exit( 1 );
@@ -65,23 +65,29 @@ int main( int argc, char *argv[] )
     }
 
     /* Limpieza de la estructura todos los valores en cero*/
-    memset( (char *) &serv_addr, '0', sizeof(serv_addr) );
+    memset((char *) &serv_addr, '0', sizeof(serv_addr));
     /* Carga de la familia de direccioens */
     serv_addr.sin_family = AF_INET;
     /* function copies n bytes de la direccion from server to socket local */
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, (size_t)server->h_length );
     /* Carga del número de puerto format big Endian*/
-    serv_addr.sin_port = htons( puerto );
+    serv_addr.sin_port = htons(puerto);
 
-    if ( connect( sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr )) < 0)
+    if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         perror( "conexion" );
         exit( 1 );
     }
-    for (int o =0;o<10;o++)
+    while(1)
     {
-        xfer_data(fileno(stdin), sockfd);
-        xfer_data(sockfd,fileno(stdout));
+        if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
+            write(STDOUT_FILENO, buffer, readbytes);
+
+        if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE))>0)
+            write(sockfd, buffer, strlen(buffer));
+
+        if (strstr(buffer, "exit") != NULL)
+            break;
     }
     return 0;
 }
@@ -106,7 +112,7 @@ int command(char* u, char* i, char* p)
         perror("usuario");
         return -1;
     }
-    user = user+1;
+    user = user + 1;
     ip = strstr(prompt, "@" );
     if(ip == NULL)
     {
@@ -133,7 +139,7 @@ int command(char* u, char* i, char* p)
     return 0;
 }
 
-/*
+/**
  * fileno() Devuelve el número de descriptor de archivo asociado
  *
  */

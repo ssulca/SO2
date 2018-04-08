@@ -10,6 +10,7 @@
 #CMAKE
 cmake-build-debug/
 CMakeLists.txt
+*.o
 
 #carpetas auxiliares
 sockets/

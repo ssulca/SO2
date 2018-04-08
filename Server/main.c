@@ -21,6 +21,7 @@ int main() {
     char *args[20];
     /*buffer para el  Pc name*/
     char hostname[BUFSIZE];
+    char cdir[256];
     /* get PC name */
     gethostname(hostname, BUFSIZE-1);
     /* Asigna un Handler para la señal de terminacion de procesos hijos, permite
@@ -29,7 +30,10 @@ int main() {
 
     while(1) {
         //printf("\033[33m%s@%s \033[34m%s $ \033[37m", getpwuid(geteuid())->pw_name, hostname, getcwd(NULL, 0));
-        write(STDOUT_FILENO,".\n",3);
+        memset( cdir, '\0', sizeof(cdir));
+        strcpy(cdir,getcwd(NULL, 0));
+        strcat(cdir, " $ \0");
+        write(STDOUT_FILENO,cdir, sizeof(cdir));
         /* pide el comando. se hace con fgets xq permite leer la linea completa */
         fgets(input, BUFSIZE, stdin);
         if(input[0]=='\n')
@@ -92,7 +96,6 @@ int main() {
             index++;
         }
         while(comands[index]!=NULL && *comands[index]!='\0');
-        //write(STDOUT_FILENO,"\n",2);
     }
 }
 
