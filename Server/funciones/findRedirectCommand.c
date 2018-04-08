@@ -9,25 +9,30 @@
  * @param fdout, fileDescriptor para redireccion de la Salida
  * @return
  */
- void findRedirectCommand(char*  args,int* fdin,int* fdout){
-     char *in=NULL;
-     char *out=NULL;
-    in=strstr(args,"<");
-    out=strstr(args,">");
-    if(in!=NULL) {
-        if (*in == '<') {
-            *(in+1)='\0';
+ void findRedirectCommand(char*  args, int* fdin, int* fdout)
+{
+    char *in = NULL;
+    char *out = NULL;
+    in = strstr(args,"<");
+    out = strstr(args,">");
+    if(in != NULL)
+    {
+        if (*in == '<')
+        {
+            *(in+1) = '\0';
             *in = '\0';
             in += 2;
-            *fdin=open(in, O_RDONLY, 0600);
+            *fdin = open(in, O_RDONLY, 0600);
         }
     }
-    if(out!=NULL) {
-        if (*out == '>') {
-            *(out-1)='\0';
+    if(out != NULL)
+    {
+        if (*out == '>')
+        {
+            *(out-1) = '\0';
             *out = '\0';
             out += 2;
-            *fdout=open(out, O_WRONLY | O_CREAT, 0600);
+            *fdout = open(out, O_WRONLY | O_CREAT, 0600);
         }
     }
 }
