@@ -23,7 +23,7 @@ int main( int argc, char *argv[] ) {
     int tob[2], formb[6];
 
     /* argumentos para el bash */
-    char * argv_h[] = {"/home/sergio/CLionProjects/socket/soc_m/releaseBaash/baash", 0};
+    char * argv_h[] = {"/home/sergio/CLionProjects/OSystem/TP1SO_Socket/Server/bash", 0};
 
     /* agregados*/
     struct pollfd pfds[2];
@@ -111,6 +111,7 @@ int main( int argc, char *argv[] ) {
 
                 /* Redireccion de stdout y stdin */
                 dup2(tob[0], STDIN_FILENO);
+                fclose(stdout);
                 dup2(formb[1], STDOUT_FILENO);
 
                 /* ejecucion de bash */
@@ -126,19 +127,22 @@ int main( int argc, char *argv[] ) {
                 /* cerramos el lado de lectura del pipe  y escritura del pipe */
                 close( tob[0] );
                 close( formb[1] );
+
                 poll(pfds , 2 ,-1);
 
                 while(1)
                 {
                     if(pfds[1].revents  != 0)
                     {
-                        if((readbytes = read(formb[0], buffer, TAM))>0)
-                        write(newsockfd, buffer, (size_t )readbytes);
+                        write(STDOUT_FILENO, "enviado\n", 9);
+                        if((readbytes = read(formb[0], buffer, TAM)) >= 0)
+                            write(newsockfd, buffer, (size_t )readbytes);
                     }
 
                     if(pfds[0].revents  != 0)
                     {
-                        if ((readbytes = read(newsockfd, buffer, TAM)) > 0)
+                        write(STDOUT_FILENO, "recibido", 9);
+                        if ((readbytes = read(newsockfd, buffer, TAM)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
 
                         if (strstr(buffer, "exit") != NULL)

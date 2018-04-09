@@ -95,14 +95,14 @@ int main( int argc, char *argv[] )
         if(pfds[0].revents  != 0)
         {
             memset(buffer, '\0', BUFSIZE);
-            if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
+            if((readbytes = read(sockfd, buffer, BUFSIZE)) >= 0)
                 write(STDOUT_FILENO, buffer, (size_t)readbytes);
         }
 
         if(pfds[1].revents  != 0)
         {
             memset(buffer, '\0', BUFSIZE);
-            if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE))>0)
+            if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE)) >= 0)
                 write(sockfd, buffer, (size_t )readbytes);
 
             if (strstr(buffer, "exit") != NULL)
