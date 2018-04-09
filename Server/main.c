@@ -41,7 +41,7 @@ int main() {
         /* como el string se toma desde archivo, se debe borrar el ultimo caracter(\n)
            xq trae problemas para la lectura de los argumentos*/
         input[strlen(input) - 1] = NULL_I;
-        /* comandos divididos por & */
+
         char *comands[]={NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
         /* indica si los procesos se ejecutaran concurrentemente */
         int concurrentFlag=0;

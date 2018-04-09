@@ -27,6 +27,6 @@ char *bash_cdHome(char *PATH)
     char *buffer = malloc(sizeof(char) * bufsize);
     /* obtengo el /home/userX */
     strcpy(buffer, getpwuid(geteuid())->pw_dir);
-    strncat(buffer, PATH, bufsize);
+    strncat(buffer, PATH, (size_t)bufsize);
     return buffer;
 }

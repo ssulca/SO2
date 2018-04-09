@@ -2,11 +2,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <unistd.h> /*declaraciones de read and write*/
+#include <poll.h>
+
 #define TAM 256
 
 void xfer_data(int srcfd, int tgtfd);
@@ -17,12 +18,15 @@ int main( int argc, char *argv[] ) {
 	char buffer[TAM];
     /* Estructura del socket del cliente */
     struct sockaddr_in serv_addr, cli_addr;
-    int readbytes = 0;
+    ssize_t readbytes = 0;
     /* files descriptors pipe */
-    int tob[2], formb[2];
-    int pidv;
+    int tob[2], formb[6];
+
     /* argumentos para el bash */
-    char * argv_h[] = {"/home/sergio/CLionProjects/OSystem/TP1SO_Socket/Server/bash", 0};
+    char * argv_h[] = {"/home/sergio/CLionProjects/socket/soc_m/releaseBaash/baash", 0};
+
+    /* agregados*/
+    struct pollfd pfds[2];
 
     memset(buffer, '\0', TAM);
 
@@ -62,9 +66,10 @@ int main( int argc, char *argv[] ) {
     listen(sockfd, 5);
 	clilen = sizeof(cli_addr);
 
+
 	while(1)
     {
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, &clilen);
+		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t*)&clilen);
 		if (newsockfd < 0)
         {
 			perror("accept cli");
@@ -85,6 +90,12 @@ int main( int argc, char *argv[] ) {
             /* pipes full duplex */
             pipe( tob );
             pipe( formb );
+            /*Agregados */
+            pfds[0].fd = newsockfd;
+            pfds[0].events = POLLIN;
+
+            pfds[1].fd = formb[0];
+            pfds[1].events = POLLIN;
 
             pid = vfork();
             if (pid < 0) {
@@ -115,17 +126,24 @@ int main( int argc, char *argv[] ) {
                 /* cerramos el lado de lectura del pipe  y escritura del pipe */
                 close( tob[0] );
                 close( formb[1] );
+                poll(pfds , 2 ,-1);
 
                 while(1)
                 {
-                    if((readbytes = read(formb[0], buffer, TAM))>0)
-                        write(newsockfd, buffer, readbytes);
+                    if(pfds[1].revents  != 0)
+                    {
+                        if((readbytes = read(formb[0], buffer, TAM))>0)
+                        write(newsockfd, buffer, (size_t )readbytes);
+                    }
 
-                    if((readbytes = read(newsockfd, buffer, TAM))>0)
-                        write(tob[1], buffer, strlen(buffer));
+                    if(pfds[0].revents  != 0)
+                    {
+                        if ((readbytes = read(newsockfd, buffer, TAM)) > 0)
+                            write(tob[1], buffer, (size_t) readbytes);
 
-                    if (strstr(buffer, "exit") != NULL)
-                        break;
+                        if (strstr(buffer, "exit") != NULL)
+                            break;
+                    }
                 }
 
                 close(tob[1]);

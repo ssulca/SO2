@@ -4,12 +4,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
 /*declaraciones de las funciones rear and write */
 #include <unistd.h>
+#include <poll.h>
 
 #define BUFSIZE 512
 #define PROMBUF 256
@@ -23,7 +23,8 @@ void xfer_data(int srcfd, int tgtfd);
 int main( int argc, char *argv[] )
 {
     /* file descriptor del socket, puerto de conxion*/
-    int sockfd, puerto, readbytes;
+    int sockfd, puerto;
+    ssize_t readbytes = 0;
     /* Estructura del socket del serv*/
     struct sockaddr_in serv_addr;
     /* structura, contiene datos del host remoto*/
@@ -35,6 +36,9 @@ int main( int argc, char *argv[] )
     char user[USERBUF];
     char ip[IPBUF];
     char port[PORTBUF];
+
+    /* Agregados */
+    struct pollfd pfds[2];
 
     do {
         terminar = command(user, ip, port);
@@ -69,25 +73,49 @@ int main( int argc, char *argv[] )
     /* Carga de la familia de direccioens */
     serv_addr.sin_family = AF_INET;
     /* function copies n bytes de la direccion from server to socket local */
-    bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, (size_t)server->h_length );
+    bcopy(server->h_addr, (char *)&serv_addr.sin_addr.s_addr, (size_t)server->h_length );
     /* Carga del número de puerto format big Endian*/
-    serv_addr.sin_port = htons(puerto);
+    serv_addr.sin_port = htons((uint16_t)puerto);
 
     if (connect(sockfd, (struct sockaddr *)&serv_addr, sizeof(serv_addr)) < 0)
     {
         perror( "conexion" );
         exit( 1 );
     }
+
+    pfds[0].fd = sockfd;
+    pfds[0].events = POLLIN;
+    pfds[1].fd = STDIN_FILENO;
+    pfds[1].events = POLLIN;
+
+
     while(1)
     {
-        if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
-            write(STDOUT_FILENO, buffer, readbytes);
+        poll(pfds , 2 ,-1);
+        if(pfds[0].revents  != 0)
+        {
+            memset(buffer, '\0', BUFSIZE);
+            if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
+                write(STDOUT_FILENO, buffer, (size_t)readbytes);
+        }
+
+        if(pfds[1].revents  != 0)
+        {
+            memset(buffer, '\0', BUFSIZE);
+            if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE))>0)
+                write(sockfd, buffer, (size_t )readbytes);
+
+            if (strstr(buffer, "exit") != NULL)
+                break;
+        }
+        /*if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
+            write(STDOUT_FILENO, buffer, (size_t)readbytes);
 
         if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE))>0)
-            write(sockfd, buffer, strlen(buffer));
+            write(sockfd, buffer, (size_t )readbytes);
 
         if (strstr(buffer, "exit") != NULL)
-            break;
+            break;*/
     }
     return 0;
 }
