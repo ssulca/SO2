@@ -88,8 +88,15 @@ int main( int argc, char *argv[] ) {
         {
             close(sockfd);
             /* pipes full duplex */
-            pipe( tob );
-            pipe( formb );
+            if (pipe( tob ) < 0 ) {
+                perror( "apertura pipe" );
+                exit(1);
+            }
+
+            if (pipe( formb ) < 0 ) {
+                perror( "apertura pipe" );
+                exit(1);
+            }
             /*Agregados */
             pfds[0].fd = newsockfd;
             pfds[0].events = POLLIN;
@@ -97,14 +104,14 @@ int main( int argc, char *argv[] ) {
             pfds[1].fd = formb[0];
             pfds[1].events = POLLIN;
 
-            pid = vfork();
+            pid = fork();
             if (pid < 0) {
                 printf("Fork error \n");
                 exit(1);
             }
             if (pid == 0 ) /* proceso hijo ejecuta bash*/
             {
-                close(newsockfd);
+                //close(newsockfd);
                 /* cerrar el lado de escritura del pipe y  de lectura del pipe */
                 close( tob[1] );
                 close( formb[0] );
@@ -128,20 +135,19 @@ int main( int argc, char *argv[] ) {
                 close( tob[0] );
                 close( formb[1] );
 
-                poll(pfds , 2 ,-1);
 
                 while(1)
                 {
+                    poll(pfds , 2 ,-1);
+
                     if(pfds[1].revents  != 0)
                     {
-                        write(STDOUT_FILENO, "enviado\n", 9);
                         if((readbytes = read(formb[0], buffer, TAM)) >= 0)
                             write(newsockfd, buffer, (size_t )readbytes);
                     }
 
                     if(pfds[0].revents  != 0)
                     {
-                        write(STDOUT_FILENO, "recibido", 9);
                         if ((readbytes = read(newsockfd, buffer, TAM)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
 
@@ -152,8 +158,8 @@ int main( int argc, char *argv[] ) {
 
                 close(tob[1]);
                 close(formb[0]);
+                wait(NULL);
             }
-            waitpid( pid, NULL, 0 );
         }
 		else /* Proceso padre del socket*/
         {
