@@ -8,36 +8,26 @@
 #include <unistd.h> /*declaraciones de read and write*/
 #include <poll.h>
 
-#define TAM 256
+#define DEF_SIZE 256
 
-void xfer_data(int srcfd, int tgtfd);
 
 int main( int argc, char *argv[] ) {
 
 	int sockfd, newsockfd, puerto, clilen, pid;
-	char buffer[TAM];
+	char buffer[DEF_SIZE];
     /* Estructura del socket del cliente */
     struct sockaddr_in serv_addr, cli_addr;
     ssize_t readbytes = 0;
     /* files descriptors pipe */
     int tob[2], formb[6];
-
-    /* argumentos para el bash */
+    /* atributos para la ejecucion del bash */
     char * argv_h[] = {"/home/sergio/CLionProjects/OSystem/TP1SO_Socket/Server/bash", 0};
-
-    /* agregados*/
+    /* estructura para la funcion poll, cientiene 2 fd que escuchara*/
     struct pollfd pfds[2];
 
-    memset(buffer, '\0', TAM);
-
-    if (argc < 2)
-    {
-        fprintf(stderr, "Uso: %s <puerto>\n", argv[0]);
-		exit( 1 );
-	}
-
+    memset(buffer, '\0', DEF_SIZE);
+    
 	sockfd = socket(AF_INET, SOCK_STREAM, 0);
-
     if (sockfd < 0)
     {
 		perror(" apertura de socket ");
@@ -77,7 +67,6 @@ int main( int argc, char *argv[] ) {
 		}
 
         pid = fork();
-
         if (pid < 0)
         {
 			perror("fork");
@@ -92,7 +81,6 @@ int main( int argc, char *argv[] ) {
                 perror( "apertura pipe" );
                 exit(1);
             }
-
             if (pipe( formb ) < 0 ) {
                 perror( "apertura pipe" );
                 exit(1);
@@ -105,7 +93,8 @@ int main( int argc, char *argv[] ) {
             pfds[1].events = POLLIN;
 
             pid = fork();
-            if (pid < 0) {
+            if (pid < 0) 
+            {
                 printf("Fork error \n");
                 exit(1);
             }
@@ -134,21 +123,20 @@ int main( int argc, char *argv[] ) {
                 /* cerramos el lado de lectura del pipe  y escritura del pipe */
                 close( tob[0] );
                 close( formb[1] );
-
-
+                
                 while(1)
                 {
                     poll(pfds , 2 ,-1);
 
                     if(pfds[1].revents  != 0)
                     {
-                        if((readbytes = read(formb[0], buffer, TAM)) >= 0)
+                        if((readbytes = read(formb[0], buffer, DEF_SIZE)) >= 0)
                             write(newsockfd, buffer, (size_t )readbytes);
                     }
 
                     if(pfds[0].revents  != 0)
                     {
-                        if ((readbytes = read(newsockfd, buffer, TAM)) >= 0)
+                        if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
 
                         if (strstr(buffer, "exit") != NULL)
@@ -168,18 +156,4 @@ int main( int argc, char *argv[] ) {
 		}
 	}
 	return 0; 
-}
-
-void xfer_data(int srcfd, int tgtfd)
-{
-    char buf[1024];
-    int cnt, len;
-    /* leer desde el archivo stdin y escribir el archivo de stdout  */
-    if((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
-    {
-        if(len < 0)
-            perror("helper.c:xfer_data:read");
-        if((len = (int)write(tgtfd, buf, cnt)) != cnt)
-            perror("helper.c:xfer_data:write");
-    }
 }
