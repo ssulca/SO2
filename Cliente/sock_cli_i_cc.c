@@ -145,9 +145,8 @@ int command(char* u, char* i, char* p)
     printf("> ");
     fgets(prompt,PROMBUF, stdin);
 
-    if (strstr(prompt, "exit") == NULL)
+    if (strstr(prompt, "exit") != NULL)
     {
-        perror("Comando no reconocido");
         return 1;
     }
 
