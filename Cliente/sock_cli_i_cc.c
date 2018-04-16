@@ -10,6 +10,8 @@
 /*declaraciones de las funciones rear and write */
 #include <unistd.h>
 #include <poll.h>
+#include <termios.h>
+
 
 #define BUFSIZE 512
 #define PROMBUF 256
@@ -18,9 +20,34 @@
 #define PORTBUF 6
 
 int command(char* u, char* i, char* p);
-void xfer_data(int srcfd, int tgtfd);
+int fun_sock(char* ip, char* user,char* port);
+int authentication(int sockfd, char* buffer, char* user);
+int get_pass( char *pas);
 
-int main( int argc, char *argv[] )
+int main( int argc, char *argv[] ) {
+    int terminar = 0;
+
+
+    /*nuevos varaibles */
+    char user[USERBUF];
+    char ip[IPBUF];
+    char port[PORTBUF];
+
+    while(1){
+        terminar = command(user, ip, port);
+        if (terminar < 0)
+            continue;
+        if (terminar == 1)
+            break;
+        if(fun_sock(ip, user, port) == 0)
+            break;
+    }
+    return 0;
+    /* convierto numero entero*/
+
+}
+
+int fun_sock(char* ip, char* user,char* port)
 {
     /* file descriptor del socket, puerto de conxion*/
     int sockfd, puerto;
@@ -32,18 +59,9 @@ int main( int argc, char *argv[] )
     int terminar = 0;
 
     char buffer[BUFSIZE];
-    /*nuevos varaibles */
-    char user[USERBUF];
-    char ip[IPBUF];
-    char port[PORTBUF];
 
     /* Agregados */
     struct pollfd pfds[2];
-
-    do {
-        terminar = command(user, ip, port);
-    }
-    while (terminar != 0);
 
     /* convierto numero entero*/
     puerto = atoi(port);
@@ -83,6 +101,10 @@ int main( int argc, char *argv[] )
         exit( 1 );
     }
 
+    /*proceso de autenticacion */
+    if (authentication(sockfd, buffer,user)<0)
+        return -1;
+
     pfds[0].fd = sockfd;
     pfds[0].events = POLLIN;
     pfds[1].fd = STDIN_FILENO;
@@ -108,14 +130,7 @@ int main( int argc, char *argv[] )
             if (strstr(buffer, "exit") != NULL)
                 break;
         }
-        /*if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
-            write(STDOUT_FILENO, buffer, (size_t)readbytes);
 
-        if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE))>0)
-            write(sockfd, buffer, (size_t )readbytes);
-
-        if (strstr(buffer, "exit") != NULL)
-            break;*/
     }
     return 0;
 }
@@ -127,8 +142,15 @@ int command(char* u, char* i, char* p)
     char *ip;
     char *port;
 
-    printf("prompt > ");
+    printf("> ");
     fgets(prompt,PROMBUF, stdin);
+
+    if (strstr(prompt, "exit") == NULL)
+    {
+        perror("Comando no reconocido");
+        return 1;
+    }
+
     if (strstr(prompt, "connect") == NULL)
     {
         perror("Comando no reconocido");
@@ -167,20 +189,75 @@ int command(char* u, char* i, char* p)
     return 0;
 }
 
-/**
- * fileno() Devuelve el número de descriptor de archivo asociado
- *
- */
-void xfer_data(int srcfd, int tgtfd)
+int authentication(int sockfd, char* buffer, char* user)
 {
-    char buf[1024];
-    int cnt, len;
-    /* leer desde el archivo stdin y escribir el archivo de stdout  */
-    if((cnt = (int)read(srcfd, buf, sizeof(buf))) > 0)
-    {
-        if(len < 0)
-            perror("helper.c:xfer_data:read");
-        if((len = (int)write(tgtfd, buf, cnt)) != cnt)
-            perror("helper.c:xfer_data:write");
+    /* proceso de  atenticacion ,envio de usuario*/
+    if ( write( sockfd, user, strlen(user)) < 0 ) {
+        perror( "escritura de socket" );
+        return -1;
     }
+    if ( read( sockfd, buffer, BUFSIZE ) < 0 ) {
+        perror( "lectura de socket" );
+        return -1;
+    }
+    if (strstr(buffer, "unknown") != NULL) /*no existe el usuario*/
+    {
+        printf("unknown\n");
+        return -1 ;
+    }
+
+    while(1){
+        memset(buffer,'\0',BUFSIZE);
+        get_pass(buffer);
+        if ( write( sockfd, buffer, BUFSIZE) < 0 ) {
+            perror( "escritura de socket" );
+            return -1;
+        }
+
+        if ( read( sockfd, buffer, BUFSIZE ) < 0 ) {
+            perror( "lectura de socket" );
+            return -1;
+        }
+        if (strstr(buffer, "rejected") != NULL) /*no existe el usuario*/
+            return -1 ;
+        if (strstr(buffer, "accepted") != NULL) /*aceptado*/
+            break;
+    }
+    return 0;
+
+}
+int get_pass( char *pas)
+{
+    char passwd[16];
+    char *in = passwd;
+    struct termios  tty_orig;
+    char c;
+    tcgetattr( STDIN_FILENO, &tty_orig );
+    struct termios  tty_work = tty_orig;
+
+    puts("Please input password:");
+    tty_work.c_lflag &= ~( ECHO | ICANON );  // | ISIG );
+    tty_work.c_cc[ VMIN ]  = 1;
+    tty_work.c_cc[ VTIME ] = 0;
+    tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_work );
+
+    while (1) {
+        if (read(STDIN_FILENO, &c, sizeof c) > 0) {
+            if ('\n' == c) {
+                break;
+            }
+            *in++ = c;
+            write(STDOUT_FILENO, "*", 1);
+        }
+    }
+
+    tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_orig );
+
+    *in = '\0';
+    fputc('\n', stdout);
+    strcpy(pas,passwd);
+    // if you want to see the result:
+    // printf("Got password: %s\n", passwd);
+
+    return 0;
 }

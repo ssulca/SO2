@@ -10,10 +10,15 @@
 
 #define DEF_SIZE 256
 
+int authentication(int newsockfd, char* buffer, char* user, char* pass);
 
-int main( int argc, char *argv[] ) {
+int main( int argc, char *argv[] )
+{
+    /* Atributos de atenticacion del server*/
+    char user[] ={"desk"};
+    char pass[] ={"server"};
 
-	int sockfd, newsockfd, puerto, clilen, pid;
+    int sockfd, newsockfd, puerto, clilen, pid;
 	char buffer[DEF_SIZE];
     /* Estructura del socket del cliente */
     struct sockaddr_in serv_addr, cli_addr;
@@ -75,7 +80,13 @@ int main( int argc, char *argv[] ) {
 
 		if (pid == 0) /* Proceso hijo del socket */
         {
+
             close(sockfd);
+            if (authentication(newsockfd, buffer, user, pass)<0)
+            {
+                close(newsockfd);
+                exit(1);
+            }
             /* pipes full duplex */
             if (pipe( tob ) < 0 ) {
                 perror( "apertura pipe" );
@@ -156,4 +167,56 @@ int main( int argc, char *argv[] ) {
 		}
 	}
 	return 0; 
+}
+
+int authentication(int newsockfd, char* buffer, char* user, char* pass)
+{
+    int n = 0;
+    /*usuario*/
+    if ( read( newsockfd, buffer, DEF_SIZE-1) < 0 ) {
+        perror( "lectura de socket" );
+        return -1;
+    }
+    //buffer[strlen(buffer)-1] = '\0';
+    if( strcmp( user, buffer ) ) {
+        printf("%s\n",buffer);
+        if ( write( newsockfd, "unknown", 8 ) < 0 )
+            perror( "escritura en socket" );
+        return -1;
+    }
+    if ( write( newsockfd, "qwertyu", 8 ) < 0 ) {
+        perror( "escritura en socket" );
+        return -1;
+    }
+
+    while (1){
+        if ( read( newsockfd, buffer, DEF_SIZE-1) < 0 ) {
+            perror( "lectura de socket" );
+            return -1;
+        }
+        //buffer[strlen(buffer)-1] = '\0';
+        if( !strcmp( pass, buffer ) ) {
+            if ( write( newsockfd, "accepted", 9 ) < 0 ) {
+                perror( "escritura en socket" );
+                return -1;
+            }
+            break;
+        }
+        else if( n >= 3){
+            printf("%s\n",buffer);
+            if (write(newsockfd, "rejected", 9) < 0)
+                perror("escritura en socket");
+            return -1;
+        }
+        else{
+            printf("%s\n",buffer);
+            if (write(newsockfd, "try", 4) < 0) {
+                perror("escritura en socket");
+                return -1;
+            }
+        }
+        n++;
+    }
+    return 0;
+
 }
