@@ -97,6 +97,7 @@ int main( int argc, char *argv[] )
             memset(buffer, '\0', BUFSIZE);
             if((readbytes = read(sockfd, buffer, BUFSIZE)) >= 0)
                 write(STDOUT_FILENO, buffer, (size_t)readbytes);
+            printf("\n1rsock 2 wout\n");
         }
 
         if(pfds[1].revents  != 0)
@@ -104,18 +105,11 @@ int main( int argc, char *argv[] )
             memset(buffer, '\0', BUFSIZE);
             if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE)) >= 0)
                 write(sockfd, buffer, (size_t )readbytes);
+            printf("\n1rin 2 wsock\n");
 
             if (strstr(buffer, "exit") != NULL)
                 break;
         }
-        /*if((readbytes = read(sockfd, buffer, BUFSIZE))>0)
-            write(STDOUT_FILENO, buffer, (size_t)readbytes);
-
-        if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE))>0)
-            write(sockfd, buffer, (size_t )readbytes);
-
-        if (strstr(buffer, "exit") != NULL)
-            break;*/
     }
     return 0;
 }
