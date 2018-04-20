@@ -18,6 +18,7 @@
 #define USERBUF 32
 #define IPBUF 15
 #define PORTBUF 6
+#define SIZEPASS 16
 
 int command(char* u, char* i, char* p);
 int fun_sock(char* ip, char* user,char* port);
@@ -102,14 +103,13 @@ int fun_sock(char* ip, char* user,char* port)
     }
 
     /*proceso de autenticacion */
-    if (authentication(sockfd, buffer,user)<0)
+    if (authentication(sockfd, buffer,user) < 0)
         return -1;
 
     pfds[0].fd = sockfd;
     pfds[0].events = POLLIN;
     pfds[1].fd = STDIN_FILENO;
     pfds[1].events = POLLIN;
-
 
     while(1)
     {
@@ -119,6 +119,7 @@ int fun_sock(char* ip, char* user,char* port)
             memset(buffer, '\0', BUFSIZE);
             if((readbytes = read(sockfd, buffer, BUFSIZE)) >= 0)
                 write(STDOUT_FILENO, buffer, (size_t)readbytes);
+            printf("\n1rsok 2 wout\n");
         }
 
         if(pfds[1].revents  != 0)
@@ -126,6 +127,8 @@ int fun_sock(char* ip, char* user,char* port)
             memset(buffer, '\0', BUFSIZE);
             if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE)) >= 0)
                 write(sockfd, buffer, (size_t )readbytes);
+
+            printf("\n1rin 2 wsock\n");
 
             if (strstr(buffer, "exit") != NULL)
                 break;
@@ -204,10 +207,12 @@ int authentication(int sockfd, char* buffer, char* user)
         printf("unknown\n");
         return -1 ;
     }
-
-    while(1){
+    /* pass */
+    while(1)
+    {
         memset(buffer,'\0',BUFSIZE);
         get_pass(buffer);
+
         if ( write( sockfd, buffer, BUFSIZE) < 0 ) {
             perror( "escritura de socket" );
             return -1;
@@ -217,7 +222,7 @@ int authentication(int sockfd, char* buffer, char* user)
             perror( "lectura de socket" );
             return -1;
         }
-        if (strstr(buffer, "rejected") != NULL) /*no existe el usuario*/
+        if (strstr(buffer, "rejected") != NULL) /*bad pass*/
             return -1 ;
         if (strstr(buffer, "accepted") != NULL) /*aceptado*/
             break;
@@ -225,16 +230,18 @@ int authentication(int sockfd, char* buffer, char* user)
     return 0;
 
 }
-int get_pass( char *pas)
+int get_pass( char *buffer)
 {
-    char passwd[16];
+    char passwd[SIZEPASS];
     char *in = passwd;
-    struct termios  tty_orig;
+    struct termios tty_orig;
     char c;
+
+    memset(passwd,'\0',SIZEPASS);
     tcgetattr( STDIN_FILENO, &tty_orig );
     struct termios  tty_work = tty_orig;
 
-    puts("Please input password:");
+    puts("password:");
     tty_work.c_lflag &= ~( ECHO | ICANON );  // | ISIG );
     tty_work.c_cc[ VMIN ]  = 1;
     tty_work.c_cc[ VTIME ] = 0;
@@ -254,9 +261,7 @@ int get_pass( char *pas)
 
     *in = '\0';
     fputc('\n', stdout);
-    strcpy(pas,passwd);
-    // if you want to see the result:
-    // printf("Got password: %s\n", passwd);
+    strcpy(buffer, passwd);
 
     return 0;
 }
