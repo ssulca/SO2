@@ -26,7 +26,7 @@ int main( int argc, char *argv[] )
     /* files descriptors pipe */
     int tob[2], formb[6];
     /* atributos para la ejecucion del bash */
-    char * argv_h[] = {"/home/sergio/CLionProjects/OSystem/TP1SO_Socket/Server/bash", 0};
+    char * argv_h[] = {"../Server/bash", 0};
     /* estructura para la funcion poll, cientiene 2 fd que escuchara*/
     struct pollfd pfds[2];
 
@@ -67,7 +67,7 @@ int main( int argc, char *argv[] )
 		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t*)&clilen);
 		if (newsockfd < 0)
         {
-			perror("accept cli");
+			perror("accept");
 			exit(1);
 		}
 
@@ -80,13 +80,11 @@ int main( int argc, char *argv[] )
 
 		if (pid == 0) /* Proceso hijo del socket */
         {
-
             close(sockfd);
+
             if (authentication(newsockfd, buffer, user, pass)<0)
-            {
-                close(newsockfd);
                 exit(1);
-            }
+
             /* pipes full duplex */
             if (pipe( tob ) < 0 ) {
                 perror( "apertura pipe" );
@@ -143,13 +141,15 @@ int main( int argc, char *argv[] )
                     {
                         if((readbytes = read(formb[0], buffer, DEF_SIZE)) >= 0)
                             write(newsockfd, buffer, (size_t )readbytes);
+                        printf("\n1rpipe 2 wsock\n");
+
                     }
 
                     if(pfds[0].revents  != 0)
                     {
                         if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
-
+                        printf("\n1rsock 2 wpipe\n");
                         if (strstr(buffer, "exit") != NULL)
                             break;
                     }
@@ -172,30 +172,37 @@ int main( int argc, char *argv[] )
 int authentication(int newsockfd, char* buffer, char* user, char* pass)
 {
     int n = 0;
+
     /*usuario*/
     if ( read( newsockfd, buffer, DEF_SIZE-1) < 0 ) {
         perror( "lectura de socket" );
         return -1;
     }
-    //buffer[strlen(buffer)-1] = '\0';
-    if( strcmp( user, buffer ) ) {
+
+    if( strcmp( user, buffer ) != 0 )
+    {
         printf("%s\n",buffer);
         if ( write( newsockfd, "unknown", 8 ) < 0 )
             perror( "escritura en socket" );
         return -1;
     }
-    if ( write( newsockfd, "qwertyu", 8 ) < 0 ) {
-        perror( "escritura en socket" );
-        return -1;
+    else
+    {
+        if (write(newsockfd, "know", 5) < 0)
+        {
+            perror("escritura en socket");
+            return -1;
+        }
     }
 
-    while (1){
+    while (1)
+    {
         if ( read( newsockfd, buffer, DEF_SIZE-1) < 0 ) {
             perror( "lectura de socket" );
             return -1;
         }
-        //buffer[strlen(buffer)-1] = '\0';
-        if( !strcmp( pass, buffer ) ) {
+
+        if( strcmp( pass, buffer ) == 0 ) {
             if ( write( newsockfd, "accepted", 9 ) < 0 ) {
                 perror( "escritura en socket" );
                 return -1;
