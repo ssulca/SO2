@@ -12,7 +12,7 @@
 /* como el NULL declarado en las otras funciones es un puntero, molestan los warnings
    defino NULL_I como un nulo para comparacion de valores de datos */
 #define NULL_I 0
-
+#define SIZECDIR 255
 
 void SIGCHLDHandler(int s);
 
@@ -21,7 +21,7 @@ int main() {
     char *args[20];
     /*buffer para el  Pc name*/
     char hostname[BUFSIZE];
-    char cdir[256];
+    char cdir[SIZECDIR];
     /* get PC name */
     gethostname(hostname, BUFSIZE-1);
     /* Asigna un Handler para la señal de terminacion de procesos hijos, permite
@@ -29,11 +29,9 @@ int main() {
     signal(SIGCHLD,SIGCHLDHandler);
 
     while(1) {
-        //printf("\033[33m%s@%s \033[34m%s $ \033[37m", getpwuid(geteuid())->pw_name, hostname, getcwd(NULL, 0));
-        memset( cdir, '\0', sizeof(cdir));
-        strcpy(cdir,getcwd(NULL, 0));
-        strcat(cdir, " $ \0");
-        write(STDOUT_FILENO,cdir, sizeof(cdir));
+        sprintf(cdir, "\033[33m%s@%s \033[34m%s $ \033[37m", getpwuid(geteuid())->pw_name, hostname, getcwd(NULL, 0));
+
+        write(STDOUT_FILENO,cdir, strlen(cdir));
         /* pide el comando. se hace con fgets xq permite leer la linea completa */
         fgets(input, BUFSIZE, stdin);
         if(input[0]=='\n')

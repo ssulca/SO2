@@ -13,28 +13,28 @@
 #include <termios.h>
 
 
-#define BUFSIZE 512
-#define PROMBUF 256
-#define USERBUF 32
-#define IPBUF 15
-#define PORTBUF 6
+#define SIZEBUFFER 512
+#define SIZEPROMPT 256
+#define SIZEUSER 32
+#define SIZEIP 15
+#define SIZEPORT 6
 #define SIZEPASS 16
 
 int command(char* u, char* i, char* p);
 int fun_sock(char* ip, char* user,char* port);
 int authentication(int sockfd, char* buffer, char* user);
-int get_pass( char *pas);
+int get_pass( char *buffer);
 
 int main( int argc, char *argv[] ) {
     int terminar = 0;
 
-
     /*nuevos varaibles */
-    char user[USERBUF];
-    char ip[IPBUF];
-    char port[PORTBUF];
+    char user[SIZEUSER];
+    char ip[SIZEIP];
+    char port[SIZEPORT];
 
-    while(1){
+    while(1)
+    {
         terminar = command(user, ip, port);
         if (terminar < 0)
             continue;
@@ -44,8 +44,6 @@ int main( int argc, char *argv[] ) {
             break;
     }
     return 0;
-    /* convierto numero entero*/
-
 }
 
 int fun_sock(char* ip, char* user,char* port)
@@ -57,9 +55,8 @@ int fun_sock(char* ip, char* user,char* port)
     struct sockaddr_in serv_addr;
     /* structura, contiene datos del host remoto*/
     struct hostent *server;
-    int terminar = 0;
 
-    char buffer[BUFSIZE];
+    char buffer[SIZEBUFFER];
 
     /* Agregados */
     struct pollfd pfds[2];
@@ -78,7 +75,7 @@ int fun_sock(char* ip, char* user,char* port)
         perror( "ERROR apertura de socket" );
         exit( 1 );
     }
-    /*nombre del host que resuelve DNS por IP pasada*/
+    /*nombre del host que resuelve por IP */
     server = gethostbyname( ip );
 
     if (server == NULL)
@@ -103,8 +100,10 @@ int fun_sock(char* ip, char* user,char* port)
     }
 
     /*proceso de autenticacion */
-    if (authentication(sockfd, buffer,user) < 0)
+    if (authentication(sockfd, buffer,user) < 0) {
+        printf("\nRejected\n");
         return -1;
+    }
 
     pfds[0].fd = sockfd;
     pfds[0].events = POLLIN;
@@ -116,37 +115,32 @@ int fun_sock(char* ip, char* user,char* port)
         poll(pfds , 2 ,-1);
         if(pfds[0].revents  != 0)
         {
-            memset(buffer, '\0', BUFSIZE);
-            if((readbytes = read(sockfd, buffer, BUFSIZE)) >= 0)
+            memset(buffer, '\0', SIZEBUFFER);
+            if((readbytes = read(sockfd, buffer, SIZEBUFFER)) >= 0)
                 write(STDOUT_FILENO, buffer, (size_t)readbytes);
-            printf("\n1rsok 2 wout\n");
         }
-
         if(pfds[1].revents  != 0)
         {
-            memset(buffer, '\0', BUFSIZE);
-            if((readbytes = read(STDIN_FILENO, buffer, BUFSIZE)) >= 0)
+            memset(buffer, '\0', SIZEBUFFER);
+            if((readbytes = read(STDIN_FILENO, buffer, SIZEBUFFER)) >= 0)
                 write(sockfd, buffer, (size_t )readbytes);
-
-            printf("\n1rin 2 wsock\n");
 
             if (strstr(buffer, "exit") != NULL)
                 break;
         }
-
     }
     return 0;
 }
 
 int command(char* u, char* i, char* p)
 {
-    char prompt[PROMBUF];
+    char prompt[SIZEPROMPT];
     char *user;
     char *ip;
     char *port;
 
     printf("> ");
-    fgets(prompt,PROMBUF, stdin);
+    fgets(prompt,SIZEPROMPT, stdin);
 
     if (strstr(prompt, "exit") != NULL)
     {
@@ -198,37 +192,34 @@ int authentication(int sockfd, char* buffer, char* user)
         perror( "escritura de socket" );
         return -1;
     }
-    if ( read( sockfd, buffer, BUFSIZE ) < 0 ) {
+    if ( read( sockfd, buffer, SIZEBUFFER ) < 0 ) {
         perror( "lectura de socket" );
         return -1;
     }
     if (strstr(buffer, "unknown") != NULL) /*no existe el usuario*/
     {
-        printf("unknown\n");
+        printf("user unknown\n");
         return -1 ;
     }
-    /* pass */
-    while(1)
+    memset(buffer,'\0',SIZEBUFFER);
+    get_pass(buffer);
+
+    if ( write( sockfd, buffer, strlen(buffer)) < 0 )
     {
-        memset(buffer,'\0',BUFSIZE);
-        get_pass(buffer);
-
-        if ( write( sockfd, buffer, BUFSIZE) < 0 ) {
-            perror( "escritura de socket" );
-            return -1;
-        }
-
-        if ( read( sockfd, buffer, BUFSIZE ) < 0 ) {
-            perror( "lectura de socket" );
-            return -1;
-        }
-        if (strstr(buffer, "rejected") != NULL) /*bad pass*/
-            return -1 ;
-        if (strstr(buffer, "accepted") != NULL) /*aceptado*/
-            break;
+        perror( "escritura de socket" );
+        return -1;
     }
-    return 0;
 
+    if ( read( sockfd, buffer, SIZEBUFFER ) < 0 )
+    {
+        perror( "lectura de socket" );
+        return -1;
+    }
+
+    if (strstr(buffer, "accepted") != NULL) /*aceptado*/
+        return 0;
+    /* cualqier error*/
+    return -1;
 }
 int get_pass( char *buffer)
 {
@@ -237,31 +228,31 @@ int get_pass( char *buffer)
     struct termios tty_orig;
     char c;
 
-    memset(passwd,'\0',SIZEPASS);
     tcgetattr( STDIN_FILENO, &tty_orig );
     struct termios  tty_work = tty_orig;
 
+    memset(passwd,'\0',SIZEPASS);
+
     puts("password:");
-    tty_work.c_lflag &= ~( ECHO | ICANON );  // | ISIG );
+    tty_work.c_lflag &= ~( ECHO | ICANON );  /* | ISIG )*/
     tty_work.c_cc[ VMIN ]  = 1;
     tty_work.c_cc[ VTIME ] = 0;
     tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_work );
 
-    while (1) {
-        if (read(STDIN_FILENO, &c, sizeof c) > 0) {
-            if ('\n' == c) {
+    while (1)
+    {
+        if (read(STDIN_FILENO, &c, sizeof c) > 0)
+        {
+            if ('\n' == c)
                 break;
-            }
             *in++ = c;
             write(STDOUT_FILENO, "*", 1);
         }
     }
-
     tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_orig );
 
     *in = '\0';
     fputc('\n', stdout);
     strcpy(buffer, passwd);
-
     return 0;
 }

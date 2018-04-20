@@ -5,7 +5,7 @@
 #include <unistd.h>
 #include <termios.h>
 
-#define BUFSIZE 256
+#define SIZEBUFFER 256
 #define SIZEPASS 16
 //connect desk@192.168.1.10:6020
 int main()
@@ -48,13 +48,13 @@ int main()
 
 int main2() {
     //char prompt[] = {"connect desk@192.168.1.10:6020"};
-    char prompt[BUFSIZE];
+    char prompt[SIZEBUFFER];
     char* user;
     char* ip;
     char* pueto;
 
     printf("prompt > ");
-    fgets(prompt,BUFSIZE, stdin);
+    fgets(prompt,SIZEBUFFER, stdin);
     if (strstr(prompt, "connect") == NULL){
         perror("Comando no reconocido");
         exit(1);

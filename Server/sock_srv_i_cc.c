@@ -109,7 +109,7 @@ int main( int argc, char *argv[] )
             }
             if (pid == 0 ) /* proceso hijo ejecuta bash*/
             {
-                //close(newsockfd);
+                close(newsockfd);
                 /* cerrar el lado de escritura del pipe y  de lectura del pipe */
                 close( tob[1] );
                 close( formb[0] );
@@ -141,7 +141,6 @@ int main( int argc, char *argv[] )
                     {
                         if((readbytes = read(formb[0], buffer, DEF_SIZE)) >= 0)
                             write(newsockfd, buffer, (size_t )readbytes);
-                        printf("\n1rpipe 2 wsock\n");
 
                     }
 
@@ -149,7 +148,7 @@ int main( int argc, char *argv[] )
                     {
                         if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
-                        printf("\n1rsock 2 wpipe\n");
+
                         if (strstr(buffer, "exit") != NULL)
                             break;
                     }
@@ -171,19 +170,20 @@ int main( int argc, char *argv[] )
 
 int authentication(int newsockfd, char* buffer, char* user, char* pass)
 {
-    int n = 0;
-
     /*usuario*/
-    if ( read( newsockfd, buffer, DEF_SIZE-1) < 0 ) {
-        perror( "lectura de socket" );
+    if (read(newsockfd, buffer, DEF_SIZE - 1) < 0)
+    {
+        perror("lectura de socket");
         return -1;
     }
 
-    if( strcmp( user, buffer ) != 0 )
+    if (strcmp(user, buffer) != 0)
     {
-        printf("%s\n",buffer);
-        if ( write( newsockfd, "unknown", 8 ) < 0 )
-            perror( "escritura en socket" );
+        printf("%s\n", buffer);
+        if (write(newsockfd, "unknown", 8) < 0)
+            perror("escritura en socket");
+
+        printf("\nUsuario rechazado \n");
         return -1;
     }
     else
@@ -194,36 +194,25 @@ int authentication(int newsockfd, char* buffer, char* user, char* pass)
             return -1;
         }
     }
-
-    while (1)
+    /* pass autentication */
+    if (read(newsockfd, buffer, DEF_SIZE - 1) < 0)
     {
-        if ( read( newsockfd, buffer, DEF_SIZE-1) < 0 ) {
-            perror( "lectura de socket" );
-            return -1;
-        }
-
-        if( strcmp( pass, buffer ) == 0 ) {
-            if ( write( newsockfd, "accepted", 9 ) < 0 ) {
-                perror( "escritura en socket" );
-                return -1;
-            }
-            break;
-        }
-        else if( n >= 3){
-            printf("%s\n",buffer);
-            if (write(newsockfd, "rejected", 9) < 0)
-                perror("escritura en socket");
-            return -1;
-        }
-        else{
-            printf("%s\n",buffer);
-            if (write(newsockfd, "try", 4) < 0) {
-                perror("escritura en socket");
-                return -1;
-            }
-        }
-        n++;
+        perror("lectura de socket");
+        return -1;
     }
-    return 0;
 
+    if (strcmp(pass, buffer) == 0) {
+        if (write(newsockfd, "accepted", 9) < 0) {
+            perror("escritura en socket");
+            return -1;
+        }
+        return 0;
+    }
+    else
+    {
+        if (write(newsockfd, "rejected", 9) < 0)
+            perror("escritura en socket");
+        printf("conexion rejected\n");
+        return -1;
+    }
 }
