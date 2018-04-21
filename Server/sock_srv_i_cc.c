@@ -1,4 +1,6 @@
-
+//
+// Created by sergio on 30/03/18.
+//
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +22,7 @@ int main( int argc, char *argv[] )
     char pass[] ={"server"};
 
     int sockfd, newsockfd, puerto, clilen, pid;
-	char buffer[DEF_SIZE];
+    char buffer[DEF_SIZE];
     /* Estructura del socket del cliente */
     struct sockaddr_in serv_addr, cli_addr;
     ssize_t readbytes = 0;
@@ -32,53 +34,53 @@ int main( int argc, char *argv[] )
     struct pollfd pfds[2];
 
     memset(buffer, '\0', DEF_SIZE);
-    
-	sockfd = socket(AF_INET, SOCK_STREAM, 0);
+
+    sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
-		perror(" apertura de socket ");
-		exit( 1 );
-	}
+        perror(" apertura de socket ");
+        exit( 1 );
+    }
 
     /* Limpieza de la estructura */
-	memset((char *)&serv_addr, 0, sizeof(serv_addr));
-	puerto = 6020;
+    memset((char *)&serv_addr, 0, sizeof(serv_addr));
+    puerto = 6020;
 
     /* Carga de la familia de direccioens */
     serv_addr.sin_family = AF_INET;
-	serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
 
     /* Carga del número de puerto format big endian */
-	serv_addr.sin_port = htons((uint16_t)puerto);
+    serv_addr.sin_port = htons((uint16_t)puerto);
 
-	if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
+    if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
-		perror( "ligadura error al construir socket server" );
-		exit(1);
-	}
+        perror( "ligadura error al construir socket server" );
+        exit(1);
+    }
 
     printf("Proceso: %d - socket disponible: %d\n", getpid(), ntohs(serv_addr.sin_port));
     /*escucho hasta 5 peticiones*/
     listen(sockfd, 5);
-	clilen = sizeof(cli_addr);
+    clilen = sizeof(cli_addr);
 
-	while(1)
+    while(1)
     {
-		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t*)&clilen);
-		if (newsockfd < 0)
+        newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t*)&clilen);
+        if (newsockfd < 0)
         {
-			perror("accept");
-			exit(1);
-		}
+            perror("accept");
+            exit(1);
+        }
 
         pid = fork();
         if (pid < 0)
         {
-			perror("fork");
-			exit(1);
-		}
+            perror("fork");
+            exit(1);
+        }
 
-		if (pid == 0) /* Proceso hijo del socket */
+        if (pid == 0) /* Proceso hijo del socket */
         {
             close(sockfd);
 
@@ -105,7 +107,7 @@ int main( int argc, char *argv[] )
             pfds[1].events = POLLIN;
 
             pid = fork();
-            if (pid < 0) 
+            if (pid < 0)
             {
                 printf("Fork error \n");
                 exit(1);
@@ -135,7 +137,7 @@ int main( int argc, char *argv[] )
                 /* cerramos el lado de lectura del pipe  y escritura del pipe */
                 close( tob[0] );
                 close( formb[1] );
-                
+
                 while(1)
                 {
                     poll(pfds , 2 ,-1);
@@ -144,19 +146,13 @@ int main( int argc, char *argv[] )
                     {
                         if((readbytes = read(formb[0], buffer, DEF_SIZE)) >= 0)
                             write(newsockfd, buffer, (size_t )readbytes);
-<<<<<<< HEAD
 
-=======
-                        printf("\n1rpipe 2 wsock\n");
->>>>>>> da8f080b864177f01377ad283baa38cd24b9799f
                     }
 
                     if(pfds[0].revents  != 0)
                     {
                         if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
-
-                        printf("\n1rsock 2 wpipe\n");
 
                         if (strstr(buffer, "exit") != NULL)
                             break;
@@ -168,13 +164,13 @@ int main( int argc, char *argv[] )
                 wait(NULL);
             }
         }
-		else /* Proceso padre del socket*/
+        else /* Proceso padre del socket*/
         {
-			printf( "SERVIDOR: Nuevo cliente, que atiende el proceso hijo: %d\n", pid);
-			close(newsockfd);
-		}
-	}
-	return 0; 
+            printf( "SERVIDOR: Nuevo cliente, que atiende el proceso hijo: %d\n", pid);
+            close(newsockfd);
+        }
+    }
+    return 0;
 }
 
 int authentication(int newsockfd, char* buffer, char* user, char* pass)
