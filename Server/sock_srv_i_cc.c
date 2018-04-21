@@ -7,6 +7,7 @@
 #include <netinet/in.h>
 #include <unistd.h> /*declaraciones de read and write*/
 #include <poll.h>
+#include <pwd.h>
 
 #define DEF_SIZE 256
 
@@ -61,7 +62,6 @@ int main( int argc, char *argv[] )
     listen(sockfd, 5);
 	clilen = sizeof(cli_addr);
 
-
 	while(1)
     {
 		newsockfd = accept(sockfd, (struct sockaddr *) &cli_addr, (socklen_t*)&clilen);
@@ -83,7 +83,10 @@ int main( int argc, char *argv[] )
             close(sockfd);
 
             if (authentication(newsockfd, buffer, user, pass)<0)
+            {
+                printf("coexion succes\n");
                 exit(1);
+            }
 
             /* pipes full duplex */
             if (pipe( tob ) < 0 ) {
@@ -170,6 +173,9 @@ int main( int argc, char *argv[] )
 
 int authentication(int newsockfd, char* buffer, char* user, char* pass)
 {
+    struct passwd *pwd;
+
+    pwd = getpwuid(geteuid());
     /*usuario*/
     if (read(newsockfd, buffer, DEF_SIZE - 1) < 0)
     {
@@ -177,13 +183,12 @@ int authentication(int newsockfd, char* buffer, char* user, char* pass)
         return -1;
     }
 
-    if (strcmp(user, buffer) != 0)
+    if (strcmp(pwd->pw_name, buffer) != 0)
     {
         printf("%s\n", buffer);
         if (write(newsockfd, "unknown", 8) < 0)
             perror("escritura en socket");
 
-        printf("\nUsuario rechazado \n");
         return -1;
     }
     else
@@ -201,8 +206,10 @@ int authentication(int newsockfd, char* buffer, char* user, char* pass)
         return -1;
     }
 
-    if (strcmp(pass, buffer) == 0) {
-        if (write(newsockfd, "accepted", 9) < 0) {
+    if (strcmp(pass, buffer) == 0)
+    {
+        if (write(newsockfd, "accepted", 9) < 0)
+        {
             perror("escritura en socket");
             return -1;
         }
@@ -212,7 +219,7 @@ int authentication(int newsockfd, char* buffer, char* user, char* pass)
     {
         if (write(newsockfd, "rejected", 9) < 0)
             perror("escritura en socket");
-        printf("conexion rejected\n");
+
         return -1;
     }
 }

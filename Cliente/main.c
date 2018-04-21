@@ -4,46 +4,31 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
+#include <pwd.h>
+#include <crypt.h>
+#include <shadow.h>
+#include <utmp.h>
+#include <printf.h>
 
 #define SIZEBUFFER 256
 #define SIZEPASS 16
 //connect desk@192.168.1.10:6020
-int main()
-{
-    char passwd[SIZEPASS];
-    char *in = passwd;
-    struct termios tty_orig;
-    char c;
+int main(){
+    struct passwd *pwd;
+    pwd = getpwuid(geteuid());
+    char user[16];
+    memset(user,'\0',16);
+    read(STDIN_FILENO,user,15);
+    user[strlen(user)-1] ='\0';
+    printf("%s\n",user);
 
-    tcgetattr( STDIN_FILENO, &tty_orig );
-    struct termios  tty_work = tty_orig;
+    printf("%s\n",pwd->pw_name);
 
-    puts("Please input password:");
-    tty_work.c_lflag &= ~( ECHO | ICANON );  // | ISIG );
-    tty_work.c_cc[ VMIN ]  = 1;
-    tty_work.c_cc[ VTIME ] = 0;
-    tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_work );
 
-    while (1) {
-        if (read(STDIN_FILENO, &c, sizeof c) > 0) {
-            if ('\n' == c) {
-                break;
-            }
-            *in++ = c;
-            write(STDOUT_FILENO, "*", 1);
-        }
-    }
-
-    tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_orig );
-    *in = '\0';
-    printf("\n%s\n",passwd);
-
-    read(STDIN_FILENO, passwd, SIZEPASS);
-    printf("%s\n",passwd);
-    // if you want to see the result:
-    // printf("Got password: %s\n", passwd);
-
-    return 0;
+    if(strcmp(pwd->pw_name,user)==0)
+        printf("exito\n");
+    else
+        printf("nbas\n");
 }
 
 int main2() {

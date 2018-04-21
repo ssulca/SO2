@@ -12,7 +12,6 @@
 #include <poll.h>
 #include <termios.h>
 
-
 #define SIZEBUFFER 512
 #define SIZEPROMPT 256
 #define SIZEUSER 32
@@ -101,7 +100,7 @@ int fun_sock(char* ip, char* user,char* port)
 
     /*proceso de autenticacion */
     if (authentication(sockfd, buffer,user) < 0) {
-        printf("\nRejected\n");
+        printf("nombre de usuario y/o contraseña incorrecto\n");
         return -1;
     }
 
@@ -197,10 +196,8 @@ int authentication(int sockfd, char* buffer, char* user)
         return -1;
     }
     if (strstr(buffer, "unknown") != NULL) /*no existe el usuario*/
-    {
-        printf("user unknown\n");
         return -1 ;
-    }
+
     memset(buffer,'\0',SIZEBUFFER);
     get_pass(buffer);
 
