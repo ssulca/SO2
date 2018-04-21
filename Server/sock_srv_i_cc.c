@@ -13,15 +13,14 @@
 
 #define DEF_SIZE 256
 
-int authentication(int newsockfd, char* buffer, char* user, char* pass);
+int authentication(int newsockfd, char* buffer, char* pass);
 
 int main( int argc, char *argv[] )
 {
     /* Atributos de atenticacion del server*/
-    char user[] ={"desk"};
     char pass[] ={"server"};
 
-    int sockfd, newsockfd, puerto, clilen, pid;
+    int sockfd, newsockfd, clilen, pid;
     char buffer[DEF_SIZE];
     /* Estructura del socket del cliente */
     struct sockaddr_in serv_addr, cli_addr;
@@ -32,6 +31,7 @@ int main( int argc, char *argv[] )
     char * argv_h[] = {"../Server/bash", 0};
     /* estructura para la funcion poll, cientiene 2 fd que escuchara*/
     struct pollfd pfds[2];
+    uint16_t puerto = 6020;
 
     memset(buffer, '\0', DEF_SIZE);
 
@@ -44,14 +44,13 @@ int main( int argc, char *argv[] )
 
     /* Limpieza de la estructura */
     memset((char *)&serv_addr, 0, sizeof(serv_addr));
-    puerto = 6020;
 
     /* Carga de la familia de direccioens */
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_addr.s_addr = INADDR_ANY;
 
     /* Carga del número de puerto format big endian */
-    serv_addr.sin_port = htons((uint16_t)puerto);
+    serv_addr.sin_port = htons(puerto);
 
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
@@ -84,7 +83,7 @@ int main( int argc, char *argv[] )
         {
             close(sockfd);
 
-            if (authentication(newsockfd, buffer, user, pass)<0)
+            if (authentication(newsockfd, buffer, pass)<0)
             {
                 printf("coexion succes\n");
                 exit(1);
@@ -173,7 +172,7 @@ int main( int argc, char *argv[] )
     return 0;
 }
 
-int authentication(int newsockfd, char* buffer, char* user, char* pass)
+int authentication(int newsockfd, char* buffer, char* pass)
 {
     struct passwd *pwd;
 

@@ -8,31 +8,33 @@
 #define SIZEBUFF 256
 
 int main( int argc, char *argv[] ) {
-	int sockfd, puerto, n, tamano_direccion;
+	int sockfd, tamano_direccion;
 	struct sockaddr_in dest_addr;
 	struct hostent *server;
-
 	char buffer[SIZEBUFF];
-	if (argc < 3) {
-		fprintf( stderr, "Uso %s host puerto\n", argv[0] );
+	uint16_t puerto = 5000;
+
+    if (argc < 2)
+    {
+        perror("Uso %s host\n");
 		exit(0);
 	}
-
-	server = gethostbyname( argv[1] );
+    /* busca por ip */
+    server = gethostbyname( argv[1] );
 	if ( server == NULL ) {
-		fprintf( stderr, "ERROR, no existe el host\n");
+		perror("ERROR, no existe el host\n");
 		exit(0);
 	}
 
-	puerto = atoi( argv[2] );
 	sockfd = socket( AF_INET, SOCK_DGRAM, 0 );
 	if (sockfd < 0) {
 		perror( "apertura de socket" );
 		exit( 1 );
 	}
 
+    /* Carga de la familia de direccioens */
 	dest_addr.sin_family = AF_INET;
-	dest_addr.sin_port = htons( atoi( argv[2] ) );
+	dest_addr.sin_port = htons(puerto);
 	dest_addr.sin_addr = *( (struct in_addr *)server->h_addr );
 	memset( &(dest_addr.sin_zero), '\0', 8 );
 
@@ -41,14 +43,18 @@ int main( int argc, char *argv[] ) {
 	fgets( buffer, SIZEBUFF, stdin );
 
 	tamano_direccion = sizeof( dest_addr );
-	n = sendto( sockfd, (void *)buffer, SIZEBUFF, 0, (struct sockaddr *)&dest_addr, tamano_direccion );
-	if ( n < 0 ) {
+
+	if (sendto(sockfd, (void *)buffer, SIZEBUFF, 0,
+        (struct sockaddr *)&dest_addr, (socklen_t )tamano_direccion ) < 0 )
+    {
 		perror( "Escritura en socket" );
 		exit( 1 );
 	}
 	memset( buffer, 0, sizeof( buffer ) );
-	n = recvfrom( sockfd, (void *)buffer, SIZEBUFF, 0, (struct sockaddr *)&dest_addr, &tamano_direccion );
-	if ( n < 0 ) {
+
+	if (recvfrom( sockfd, (void *)buffer, SIZEBUFF, 0,
+        (struct sockaddr *)&dest_addr, (socklen_t*)&tamano_direccion ) < 0 )
+    {
 		perror( "Lectura de socket" );
 		exit( 1 );
 	}
