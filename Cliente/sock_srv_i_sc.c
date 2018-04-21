@@ -4,14 +4,20 @@
 #include <sys/types.h> 
 #include <sys/socket.h>
 #include <netinet/in.h>
-#define SIZEBUFF 256
+#include <fcntl.h>
+#include <unistd.h>
+
+#define SIZEBUFF 512
 
 int main( int argc, char *argv[] )
 {
-	int sockfd, size_direccion;
+	int sockfd, readbytes, filefd;
     char buffer[SIZEBUFF];
     struct sockaddr_in serv_addr;
+    char endflag[] = {"end-------"};
+    char okflag[] = {"ok"};
     uint16_t  puerto = 5000;
+    socklen_t size_direccion;
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
 	if (sockfd < 0)
@@ -21,7 +27,6 @@ int main( int argc, char *argv[] )
 	}
 
     memset( &serv_addr, 0, sizeof(serv_addr) );
-
 
     /* Carga de la familia de direccioens */
     serv_addr.sin_family = AF_INET;
@@ -38,23 +43,48 @@ int main( int argc, char *argv[] )
     printf( "Socket disponible: %d\n", ntohs(serv_addr.sin_port) );
 
 	size_direccion = sizeof( struct sockaddr );
-	while ( 1 ) {
-		memset( buffer, 0, SIZEBUFF );
 
-		if (recvfrom( sockfd, buffer, SIZEBUFF-1, 0,
-            (struct sockaddr *)&serv_addr, (socklen_t *)&size_direccion ) < 0)
-        {
-			perror( "lectura de socket" );
-			exit( 1 );
-		}
-		printf( "Recibí: %s", buffer );
+    memset( buffer, 0, SIZEBUFF );
 
-		if (sendto(sockfd, (void *)"Obtuve su mensaje", 18, 0,
-            (struct sockaddr *)&serv_addr, (socklen_t)size_direccion ) < 0)
+    readbytes = (int)recvfrom( sockfd, buffer, SIZEBUFF-1, 0, (struct sockaddr *)&serv_addr, &size_direccion );
+    if ( readbytes < 0)
+    {
+        perror( "lectura de socket" );
+        exit( 1 );
+    }
+
+    printf("Recivir archivo %s\n",buffer);
+    buffer[readbytes] = '\0';
+    if (sendto(sockfd, (void *)okflag, strlen(okflag), 0, (struct sockaddr *)&serv_addr, size_direccion ) < 0)
+    {
+        perror( "escritura en socket" );
+        exit( 1 );
+    }
+    filefd = open(buffer,O_RDWR | O_CREAT, 0666);
+
+    memset( buffer, 0, SIZEBUFF );
+
+    while ((readbytes = (int)recvfrom(sockfd, buffer, SIZEBUFF-1, 0,(struct sockaddr *)&serv_addr,
+                                      &size_direccion)) > 0)
+    {
+        if ( readbytes < 0)
         {
-			perror( "escritura en socket" );
-			exit( 1 );
-		}
-	}
+            perror( "lectura de socket" );
+            exit( 1 );
+        }
+        buffer[readbytes] = '\0';
+
+        if( strstr(buffer, endflag) != NULL){
+            break;
+        }
+
+        if(write(filefd, buffer, readbytes) < 0 ){
+            perror("escritura en socket");
+            exit(1);
+        }
+        memset( buffer, 0, SIZEBUFF );
+    }
+    close(filefd);
+
 	return 0;
 } 
