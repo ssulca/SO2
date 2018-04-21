@@ -144,13 +144,19 @@ int main( int argc, char *argv[] )
                     {
                         if((readbytes = read(formb[0], buffer, DEF_SIZE)) >= 0)
                             write(newsockfd, buffer, (size_t )readbytes);
+<<<<<<< HEAD
 
+=======
+                        printf("\n1rpipe 2 wsock\n");
+>>>>>>> da8f080b864177f01377ad283baa38cd24b9799f
                     }
 
                     if(pfds[0].revents  != 0)
                     {
                         if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) >= 0)
                             write(tob[1], buffer, (size_t) readbytes);
+
+                        printf("\n1rsock 2 wpipe\n");
 
                         if (strstr(buffer, "exit") != NULL)
                             break;

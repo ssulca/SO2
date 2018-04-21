@@ -117,12 +117,14 @@ int fun_sock(char* ip, char* user,char* port)
             memset(buffer, '\0', SIZEBUFFER);
             if((readbytes = read(sockfd, buffer, SIZEBUFFER)) >= 0)
                 write(STDOUT_FILENO, buffer, (size_t)readbytes);
+            printf("\n1rsock 2 wout\n");
         }
         if(pfds[1].revents  != 0)
         {
             memset(buffer, '\0', SIZEBUFFER);
             if((readbytes = read(STDIN_FILENO, buffer, SIZEBUFFER)) >= 0)
                 write(sockfd, buffer, (size_t )readbytes);
+            printf("\n1rin 2 wsock\n");
 
             if (strstr(buffer, "exit") != NULL)
                 break;
