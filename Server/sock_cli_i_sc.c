@@ -37,27 +37,28 @@ int main( int argc, char *argv[] ) {
 	dest_addr.sin_port = htons(puerto);
 	dest_addr.sin_addr = *( (struct in_addr *)server->h_addr );
 	memset( &(dest_addr.sin_zero), '\0', 8 );
-
-	printf( "Ingrese el mensaje a transmitir: " );
-	memset( buffer, 0, SIZEBUFF );
-	fgets( buffer, SIZEBUFF, stdin );
-
-	tamano_direccion = sizeof( dest_addr );
-
-	if (sendto(sockfd, (void *)buffer, SIZEBUFF, 0,
-        (struct sockaddr *)&dest_addr, (socklen_t )tamano_direccion ) < 0 )
+    while ( 1 )
     {
-		perror( "Escritura en socket" );
-		exit( 1 );
-	}
-	memset( buffer, 0, sizeof( buffer ) );
+        printf( "Ingrese el mensaje a transmitir: " );
+        memset( buffer, 0, SIZEBUFF );
+        fgets( buffer, SIZEBUFF, stdin );
 
-	if (recvfrom( sockfd, (void *)buffer, SIZEBUFF, 0,
-        (struct sockaddr *)&dest_addr, (socklen_t*)&tamano_direccion ) < 0 )
-    {
-		perror( "Lectura de socket" );
-		exit( 1 );
-	}
-	printf( "Respuesta: %s\n", buffer );
-	return 0;
+        tamano_direccion = sizeof( dest_addr );
+
+        memset(buffer, 0, SIZEBUFF);
+        if (sendto(sockfd, (void *) buffer, SIZEBUFF, 0,
+                   (struct sockaddr *) &dest_addr, (socklen_t) tamano_direccion) < 0) {
+            perror("Escritura en socket");
+            exit(1);
+        }
+        memset(buffer, 0, sizeof(buffer));
+
+        if (recvfrom(sockfd, (void *) buffer, SIZEBUFF, 0,
+                     (struct sockaddr *) &dest_addr, (socklen_t *) &tamano_direccion) < 0) {
+            perror("Lectura de socket");
+            exit(1);
+        }
+        printf("Respuesta: %s\n", buffer);
+    }
+    return 0;
 } 
