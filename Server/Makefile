@@ -1,8 +1,8 @@
-sock_srv_i_cc : sock_srv_i_cc.o
+sock_srv_i_cc : sock_srv_i_cc.o main.o
 	gcc -o sock_srv_i_cc sock_srv_i_cc.o
-
-sock_srv_i_cc.o : sock_srv_i_cc.c
+	gcc -o bash main.o
+sock_srv_i_cc.o : sock_srv_i_cc.c main.c
 	gcc -c sock_srv_i_cc.c
-
+	gcc -c main.c
 clean:
-	rm sock_srv_i_cc *.o
+	rm bash sock_srv_i_cc *.o
