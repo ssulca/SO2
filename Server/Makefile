@@ -1,16 +1,13 @@
-sock_srv_i_cc : sock_srv_i_cc.o main.o sock_cli_i_sc.o
-	gcc -o sock_srv_i_cc sock_srv_i_cc.o
-	gcc -o bash main.o
-	gcc -o sock_cli_i_sc sock_cli_i_sc.o
+CC = gcc
+sock_srv_i_cc : sock_srv_i_cc.o bash.o
+	$(CC) -o server sock_srv_i_cc.o
+	$(CC) -o bash bash.o
+	rm  *.o
+sock_srv_i_cc.o : sock_srv_i_cc.c bash.c
+	$(CC) -c sock_srv_i_cc.c $(CFLAGS)
 
-sock_srv_i_cc.o : sock_srv_i_cc.c main.c
-	gcc -c sock_srv_i_cc.c
-
-sock_cli_i_sc.o : sock_cli_i_sc.c
-	gcc -c sock_cli_i_sc.c
-
-main.o : main.c
-	gcc -c main.c
+bash.o : bash.c
+	$(CC) -c bash.c -w
 
 clean:
-	rm bash sock_cli_i_sc sock_srv_i_cc *.o
+	rm bash server

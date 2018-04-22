@@ -13,7 +13,6 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
-#include <libgen.h>
 
 #define BUFF_MAX 512
 #define BUFFUDP_MAX 1024
@@ -21,7 +20,7 @@
 #define PORT_TCP 6020
 
 int authentication(int newsockfd, char* buffer, char* pass);
-int downolad(char *path, char *ip);
+int downolad(char *pathtk, char *ip);
 void SIGCHLDHandler(int s);
 
 int main( int argc, char *argv[] )
@@ -171,9 +170,9 @@ int main( int argc, char *argv[] )
                         {
                             memset(path,'\0',BUFF_MAX);
                             strcpy(path,buffer);
-                            pathtk = strtok(path, " " );
+                            pathtk = strtok(path, " ");
                             /*obtengo solo el path*/
-                            pathtk = strtok( NULL, " " );
+                            pathtk = strtok(NULL, " ");
                         }
                         if(write(newsockfd, buffer, (size_t)readbytes) < 0)
                         {
