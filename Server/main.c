@@ -29,7 +29,7 @@ int main() {
     signal(SIGCHLD,SIGCHLDHandler);
 
     while(1) {
-        sprintf(cdir, "\033[33m%s@%s \033[34m%s $ \033[37m", getpwuid(geteuid())->pw_name, hostname, getcwd(NULL, 0));
+        sprintf(cdir, "%s@%s %s $ ", getpwuid(geteuid())->pw_name, hostname, getcwd(NULL, 0));
 
         write(STDOUT_FILENO,cdir, strlen(cdir));
         /* pide el comando. se hace con fgets xq permite leer la linea completa */

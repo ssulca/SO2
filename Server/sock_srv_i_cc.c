@@ -13,6 +13,7 @@
 #include <netdb.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
+#include <libgen.h>
 
 #define BUFF_MAX 512
 #define BUFFUDP_MAX 1024
@@ -20,7 +21,7 @@
 #define PORT_TCP 6020
 
 int authentication(int newsockfd, char* buffer, char* pass);
-int downolad(char *ip);
+int downolad(char *path, char *ip);
 void SIGCHLDHandler(int s);
 
 int main( int argc, char *argv[] )
@@ -33,7 +34,10 @@ int main( int argc, char *argv[] )
             pid;
 
     char buffer[BUFF_MAX];
-    char bu[BUFF_MAX];
+    /*  variables para manter el cwd del bash*/
+    char path[BUFF_MAX];
+    char *pathtk;
+
     /* Estructura del socket del cliente */
     struct sockaddr_in serv_addr,
                        cli_addr;
@@ -152,18 +156,24 @@ int main( int argc, char *argv[] )
                 /* cerramos el lado de lectura del pipe  y escritura del pipe */
                 close( tob[0] );
                 close( formb[1] );
-
                 while(1)
                 {
                     poll(pfds , 2 ,-1);
-                    getcwd(bu,BUFF_MAX);
-                    printf("%s\n",bu);
+
                     if(pfds[1].revents  != 0)
                     {
                         if((readbytes = read(formb[0], buffer, BUFF_MAX)) < 0)
                         {
                             perror("lectura de pipe");
                             exit(EXIT_FAILURE);
+                        }
+                        if(strstr(buffer,"/home/")!= NULL) /*salida contien el cwd*/
+                        {
+                            memset(path,'\0',BUFF_MAX);
+                            strcpy(path,buffer);
+                            pathtk = strtok(path, " " );
+                            /*obtengo solo el path*/
+                            pathtk = strtok( NULL, " " );
                         }
                         if(write(newsockfd, buffer, (size_t)readbytes) < 0)
                         {
@@ -182,7 +192,7 @@ int main( int argc, char *argv[] )
                         if(strstr(buffer,"descarga::") == buffer)
                         {
                             printf("solicitud descarga \n");
-                            downolad(inet_ntoa(cli_addr.sin_addr));
+                            downolad(pathtk, inet_ntoa(cli_addr.sin_addr));
                             continue;
                         }
                         if (write(tob[1], buffer, (size_t) readbytes) < 0)
@@ -270,10 +280,11 @@ int authentication(int newsockfd, char* buffer, char* pass)
 
 /**
  * funcion descarga archivo.
+ * @param pathtk char* , path actual del bash
  * @param ip char*, ip del cliente
  * @return int 0 , descarga completa, -1 caso contrario.
  */
-int downolad(char* ip)
+int downolad(char *pathtk, char *ip)
 {
     char path[BUFFUDP_MAX];
     char buffer[BUFFUDP_MAX];
@@ -323,7 +334,9 @@ int downolad(char* ip)
     }
 
     buffer[strlen(buffer)-1]='\0';
-    strcpy(path,"./");
+    /*obtengo el path absoluto*/
+    strcpy(path,pathtk);
+    strcat(path, "/");
     strcat(path, buffer);
     printf("path %s\n",path);
     /* busca por ip */
@@ -354,9 +367,14 @@ int downolad(char* ip)
         exit(EXIT_FAILURE);
     }
     printf("fin descarga\n");
+    close(sockfd);
     return 0;
 }
 
+/**
+ * Asigna un Handler para la señal de terminacion de procesos hijos, permite
+ * permite limpiar los procesos zombies "dinamicamente"
+ */
 void SIGCHLDHandler(int s)
 {
     wait(NULL);

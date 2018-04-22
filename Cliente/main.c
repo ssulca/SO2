@@ -13,24 +13,22 @@
 #define BUFF_MAX 256
 #define PASS_MAX 16
 //connect desk@192.168.1.10:6020
-int main(){
-    struct passwd *pwd;
-    pwd = getpwuid(geteuid());
-    char user[16];
-    memset(user,'\0',16);
-    read(STDIN_FILENO,user,15);
-    user[strlen(user)-1] ='\0';
-    printf("%s\n",user);
+int main()
+{
+    /* inicializa el arreglo de cadena */
+    char cadena[] = "Este es un enunciado con 7 tokens";
+    char *ptrToken; /* crea un apuntador char */
 
-    printf("%s\n",pwd->pw_name);
+    printf( "%s\n", cadena);
 
+    ptrToken = strtok( cadena, " " ); /* comienza la divisiÃƒÂ³n en tokens del enunciado */
+    ptrToken = strtok( NULL, " " );
+    printf( "%s\n", ptrToken );
 
-    if(strcmp(pwd->pw_name,user)==0)
-        printf("exito\n");
-    else
-        printf("nbas\n");
+    return 0; /* indica terminaciÃƒÂ³n exitosa */
+
 }
-
+/*
 int main2() {
     //char prompt[] = {"connect desk@192.168.1.10:6020"};
     char prompt[BUFF_MAX];
@@ -72,3 +70,4 @@ int main2() {
     printf("%s\n",pueto);
     return 0;
 }
+*/

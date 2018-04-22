@@ -415,6 +415,7 @@ int download (char* name)
         if( strstr(buffer, endflag) == buffer){
             printf("Descarga completa\n");
             close(filefd);
+            close(sockfd);
             return 0;
         }
 
@@ -429,5 +430,6 @@ int download (char* name)
         perror( "lectura de socket or timeout" );
         return -1;
     }
+    close(sockfd);
     return -1; /*error*/
 }
