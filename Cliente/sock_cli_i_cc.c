@@ -7,22 +7,26 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netdb.h>
-/*declaraciones de las funciones rear and write */
 #include <unistd.h>
 #include <poll.h>
 #include <termios.h>
+#include <fcntl.h>
+#include <libgen.h>
 
 #define SIZEBUFFER 512
 #define SIZEPROMPT 256
 #define SIZEUSER 32
-#define SIZEIP 15
+#define SIZEIP 13
 #define SIZEPORT 6
 #define SIZEPASS 16
+#define SIZEBUTP 1024
+#define PORTUDP 5000
 
 int command(char* u, char* i, char* p);
 int fun_sock(char* ip, char* user,char* port);
 int authentication(int sockfd, char* buffer, char* user);
 int get_pass( char *buffer);
+int download (int tcpsockfd , char* name);
 
 int main( int argc, char *argv[] ) {
     int terminar = 0;
@@ -121,8 +125,18 @@ int fun_sock(char* ip, char* user,char* port)
         if(pfds[1].revents  != 0)
         {
             memset(buffer, '\0', SIZEBUFFER);
-            if((readbytes = read(STDIN_FILENO, buffer, SIZEBUFFER)) >= 0)
-                write(sockfd, buffer, (size_t )readbytes);
+            if((readbytes = read(STDIN_FILENO, buffer, SIZEBUFFER)) < 0)
+            {
+                perror("lectura de socket");
+                exit(EXIT_FAILURE);
+            }
+            if(strstr(buffer, "descarga ") == buffer)
+            {
+                write(sockfd, "descarga::", strlen("descarga::"));
+                download(sockfd, basename(buffer + strlen("descarga ")));
+                continue;
+            }
+            write(sockfd, buffer, (size_t )readbytes);
 
             if (strstr(buffer, "exit") != NULL)
                 break;
@@ -141,12 +155,12 @@ int command(char* u, char* i, char* p)
     printf("> ");
     fgets(prompt,SIZEPROMPT, stdin);
 
-    if (strstr(prompt, "exit") != NULL)
+    if (strstr(prompt, "exit") == prompt)
     {
         return 1;
     }
 
-    if (strstr(prompt, "connect") == NULL)
+    if (strstr(prompt, "connect ") != prompt)
     {
         perror("Comando no reconocido");
         return -1;
@@ -251,5 +265,96 @@ int get_pass( char *buffer)
     *in = '\0';
     fputc('\n', stdout);
     strcpy(buffer, passwd);
+    return 0;
+}
+
+int download (int tcpsockfd , char* name)
+{
+    int sockfd, readbytes, filefd;
+    char buffer[SIZEBUTP];
+    struct sockaddr_in serv_addr;
+    char endflag[] = {"end-------"};
+
+    uint16_t  puerto = PORTUDP;
+    socklen_t size_direccion;
+
+
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0)
+    {
+        perror("ERROR en apertura de socket");
+        return -1;
+    }
+
+    memset( &serv_addr, 0, sizeof(serv_addr) );
+
+    /* Carga de la familia de direccioens */
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_addr.s_addr = INADDR_ANY;
+    serv_addr.sin_port = htons(puerto);
+    memset( &(serv_addr.sin_zero), '\0', 8 );
+
+    if( bind( sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr) ) < 0 )
+    {
+        perror( "ERROR en binding" );
+        return -1;
+    }
+    printf( "Socket disponible: %d\n", ntohs(serv_addr.sin_port) );
+
+    size_direccion = sizeof( struct sockaddr );
+
+    memset( buffer, 0, SIZEBUTP );
+
+    readbytes = (int)recvfrom( sockfd, buffer, SIZEBUTP-1, 0, (struct sockaddr *)&serv_addr, &size_direccion );
+    if ( readbytes < 0)
+    {
+        perror( "lectura de socket" );
+        exit( 1 );
+    }
+    if(strstr(buffer,"path") != buffer)
+        return -1;
+
+    printf("Recivir archivo %s\n", name);
+    buffer[readbytes] = '\0';
+
+    if (sendto(sockfd, (void *)name, strlen(name), 0, (struct sockaddr *)&serv_addr, size_direccion ) < 0)
+    {
+        perror( "escritura en socket" );
+        exit( 1 );
+    }
+
+    name[strlen(name)-1]='\0';
+    printf("Download...\n");
+
+    filefd = open(name, O_RDWR | O_CREAT, 0666);
+
+    memset( buffer, 0, SIZEBUTP );
+
+    while ((readbytes = (int)recvfrom(sockfd, buffer, SIZEBUTP-1, 0,(struct sockaddr *)&serv_addr,
+                                      &size_direccion)) > 0)
+    {
+        printf("recibiendo\n");
+        if ( readbytes < 0)
+        {
+            perror( "lectura de socket" );
+            return -1;
+        }
+        buffer[readbytes] = '\0';
+
+        if( strstr(buffer, endflag) == buffer){
+            printf("end recv\n");
+            break;
+        }
+
+        if(write(filefd, buffer, readbytes) < 0 ){
+            perror("escritura en socket");
+            return -1;
+        }
+        memset( buffer, 0, SIZEBUTP );
+    }
+    printf("end file\n");
+
+    close(filefd);
+
     return 0;
 }

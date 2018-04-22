@@ -6,6 +6,8 @@
 #include <netinet/in.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <netdb.h>
+#include <arpa/inet.h>
 
 #define SIZEBUFF 512
 
@@ -52,6 +54,7 @@ int main( int argc, char *argv[] )
         perror( "lectura de socket" );
         exit( 1 );
     }
+
 
     printf("Recivir archivo %s\n",buffer);
     buffer[readbytes] = '\0';

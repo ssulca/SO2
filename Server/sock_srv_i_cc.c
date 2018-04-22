@@ -10,10 +10,17 @@
 #include <unistd.h> /*declaraciones de read and write*/
 #include <poll.h>
 #include <pwd.h>
+#include <netdb.h> /*descarga*/
+#include <fcntl.h>
+#include <arpa/inet.h>
 
-#define DEF_SIZE 256
+#define DEF_SIZE 1024
+#define SIZEBUFF 1024
+#define PORTUDP 5000
 
 int authentication(int newsockfd, char* buffer, char* pass);
+int downolad(int newsockfd, char *ip);
+void SIGCHLDHandler(int s);
 
 int main( int argc, char *argv[] )
 {
@@ -32,6 +39,8 @@ int main( int argc, char *argv[] )
     /* estructura para la funcion poll, cientiene 2 fd que escuchara*/
     struct pollfd pfds[2];
     uint16_t puerto = 6020;
+
+    signal(SIGCHLD,SIGCHLDHandler);
 
     memset(buffer, '\0', DEF_SIZE);
 
@@ -150,8 +159,18 @@ int main( int argc, char *argv[] )
 
                     if(pfds[0].revents  != 0)
                     {
-                        if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) >= 0)
-                            write(tob[1], buffer, (size_t) readbytes);
+                        if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) < 0)
+                        {
+                            perror("lectura de socket");
+                            exit(EXIT_FAILURE);
+                        }
+                        if(strstr(buffer,"descarga::") == buffer)
+                        {
+                            printf("comand descarga\n");
+                            downolad(newsockfd, inet_ntoa(cli_addr.sin_addr));
+                            continue;
+                        }
+                        write(tob[1], buffer, (size_t) readbytes);
 
                         if (strstr(buffer, "exit") != NULL)
                             break;
@@ -223,4 +242,99 @@ int authentication(int newsockfd, char* buffer, char* pass)
 
         return -1;
     }
+}
+
+int downolad(int newsockfd, char* ip)
+{
+
+    char path[DEF_SIZE];
+    uint16_t port = PORTUDP;
+    char vagrant[]= {"/home/sergio/CLionProjects/OSystem/TP1SO_Socket/Server/Vagrantfile"};
+    int sockfd, filefd;
+    struct sockaddr_in dest_addr;
+    struct hostent *server;
+    char buffer[SIZEBUFF];
+    char endflag[] = {"end-------"};
+    printf("%s\n",ip);
+    socklen_t size_direccion;
+    int n;
+    /* Recivo el path absoluto por tcp*/
+    memset(path, '\0', DEF_SIZE);
+    memset(buffer, '\0', SIZEBUFF);
+
+
+
+    /*buffer[n]=0;
+    strcpy(path,"./");
+    strcat(path, buffer);*/
+    printf("path %s\n",vagrant);
+    /* busca por ip */
+    server = gethostbyname(ip);
+    if ( server == NULL ) {
+        perror("ERROR, no existe el host\n");
+        return -1;
+    }
+
+    sockfd = socket( AF_INET, SOCK_DGRAM, 0 );
+    if (sockfd < 0) {
+        perror( "apertura de socket" );
+        return -1;
+    }
+
+    /* Carga de la familia de direccioens */
+    dest_addr.sin_family = AF_INET;
+    dest_addr.sin_port = htons(port);
+    dest_addr.sin_addr = *( (struct in_addr *)server->h_addr );
+    memset( &(dest_addr.sin_zero), '\0', 8 );
+
+    size_direccion = sizeof( dest_addr );
+
+    /* comunicacion previa */
+    /* comunicacion previa */
+    if (sendto(sockfd, "path" , strlen("path"), 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
+    {
+        perror("Escritura en socket");
+        return -1;
+    }
+
+    if (recvfrom(sockfd, (void *) buffer, SIZEBUFF, 0, (struct sockaddr *) &dest_addr, &size_direccion) < 0)
+    {
+        perror("Lectura de socket");
+        return -1;
+    }
+
+    printf("%s\n",buffer);
+
+    filefd = open(vagrant, O_RDONLY);
+    if(filefd < 0)
+    {
+        perror("open file");
+        return -1;
+    }
+
+    memset(buffer, 0, SIZEBUFF);
+
+    while ( read(filefd, buffer, SIZEBUFF) > 0)
+    {
+        if (sendto(sockfd, (void *) buffer, SIZEBUFF, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
+        {
+            perror("Escritura en socket");
+            return -1;
+        }
+        memset(buffer, 0, SIZEBUFF);
+        printf("env..\n");
+    }
+
+    if (sendto(sockfd, (void *) endflag, strlen(endflag), 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
+    {
+        perror("Escritura en socket");
+        return -1;
+    }
+    printf("findescarga\n");
+    return 0;
+}
+
+void SIGCHLDHandler(int s)
+{
+    wait(NULL);
 }
