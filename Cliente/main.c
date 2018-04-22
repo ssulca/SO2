@@ -10,8 +10,8 @@
 #include <utmp.h>
 #include <printf.h>
 
-#define SIZEBUFFER 256
-#define SIZEPASS 16
+#define BUFF_MAX 256
+#define PASS_MAX 16
 //connect desk@192.168.1.10:6020
 int main(){
     struct passwd *pwd;
@@ -33,13 +33,13 @@ int main(){
 
 int main2() {
     //char prompt[] = {"connect desk@192.168.1.10:6020"};
-    char prompt[SIZEBUFFER];
+    char prompt[BUFF_MAX];
     char* user;
     char* ip;
     char* pueto;
 
     printf("prompt > ");
-    fgets(prompt,SIZEBUFFER, stdin);
+    fgets(prompt,BUFF_MAX, stdin);
     if (strstr(prompt, "connect") == NULL){
         perror("Comando no reconocido");
         exit(1);

@@ -8,13 +8,13 @@
 #include <fcntl.h>
 #include <unistd.h>
 
-#define SIZEBUFF 512
+#define BUFFUDP_MAX 512
 
 int main( int argc, char *argv[] ) {
 	int sockfd, filefd;
 	struct sockaddr_in dest_addr;
 	struct hostent *server;
-	char buffer[SIZEBUFF];
+	char buffer[BUFFUDP_MAX];
 	char endflag[] = {"end-------"};
     uint16_t puerto = 5000;
     socklen_t size_direccion;
@@ -57,7 +57,7 @@ int main( int argc, char *argv[] ) {
         exit(1);
     }
 
-    if (recvfrom(sockfd, (void *) buffer, SIZEBUFF, 0, (struct sockaddr *) &dest_addr, &size_direccion) < 0)
+    if (recvfrom(sockfd, (void *) buffer, BUFFUDP_MAX, 0, (struct sockaddr *) &dest_addr, &size_direccion) < 0)
     {
         perror("Lectura de socket");
         exit(1);
@@ -74,19 +74,19 @@ int main( int argc, char *argv[] ) {
         perror("open file");
         exit(1);
     }
-    memset(buffer, 0, SIZEBUFF);
+    memset(buffer, 0, BUFFUDP_MAX);
 
-    while ( read(filefd, buffer, SIZEBUFF) > 0)
+    while ( read(filefd, buffer, BUFFUDP_MAX) > 0)
     {
-        if (sendto(sockfd, (void *) buffer, SIZEBUFF, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
+        if (sendto(sockfd, (void *) buffer, BUFFUDP_MAX, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
         {
             perror("Escritura en socket");
             exit(1);
         }
-        memset(buffer, 0, SIZEBUFF);
+        memset(buffer, 0, BUFFUDP_MAX);
     }
 
-    memset(buffer, 0, SIZEBUFF);
+    memset(buffer, 0, BUFFUDP_MAX);
     strcat(buffer, endflag);
 
     if (sendto(sockfd, (void *) buffer, strlen(endflag), 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)

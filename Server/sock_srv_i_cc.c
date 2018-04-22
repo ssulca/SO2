@@ -7,48 +7,55 @@
 #include <sys/wait.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
-#include <unistd.h> /*declaraciones de read and write*/
+#include <unistd.h>
 #include <poll.h>
 #include <pwd.h>
-#include <netdb.h> /*descarga*/
+#include <netdb.h>
 #include <fcntl.h>
 #include <arpa/inet.h>
 
-#define DEF_SIZE 1024
-#define SIZEBUFF 1024
-#define PORTUDP 5000
+#define BUFF_MAX 512
+#define BUFFUDP_MAX 1024
+#define PORT_UDP 5000
+#define PORT_TCP 6020
 
 int authentication(int newsockfd, char* buffer, char* pass);
-int downolad(int newsockfd, char *ip);
+int downolad(char *ip);
 void SIGCHLDHandler(int s);
 
 int main( int argc, char *argv[] )
 {
     /* Atributos de atenticacion del server*/
     char pass[] ={"server"};
+    int     sockfd,
+            newsockfd,
+            clilen,
+            pid;
 
-    int sockfd, newsockfd, clilen, pid;
-    char buffer[DEF_SIZE];
+    char buffer[BUFF_MAX];
+    char bu[BUFF_MAX];
     /* Estructura del socket del cliente */
-    struct sockaddr_in serv_addr, cli_addr;
+    struct sockaddr_in serv_addr,
+                       cli_addr;
     ssize_t readbytes = 0;
     /* files descriptors pipe */
-    int tob[2], formb[6];
+    int tob[2],
+        formb[6];
     /* atributos para la ejecucion del bash */
     char * argv_h[] = {"../Server/bash", 0};
     /* estructura para la funcion poll, cientiene 2 fd que escuchara*/
     struct pollfd pfds[2];
-    uint16_t puerto = 6020;
+    uint16_t puerto = PORT_TCP;
 
     signal(SIGCHLD,SIGCHLDHandler);
 
-    memset(buffer, '\0', DEF_SIZE);
+    memset(buffer, '\0', BUFF_MAX);
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0)
     {
         perror(" apertura de socket ");
-        exit( 1 );
+        exit(EXIT_FAILURE);
     }
 
     /* Limpieza de la estructura */
@@ -64,7 +71,7 @@ int main( int argc, char *argv[] )
     if (bind(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0)
     {
         perror( "ligadura error al construir socket server" );
-        exit(1);
+        exit( EXIT_FAILURE);
     }
 
     printf("Proceso: %d - socket disponible: %d\n", getpid(), ntohs(serv_addr.sin_port));
@@ -78,14 +85,14 @@ int main( int argc, char *argv[] )
         if (newsockfd < 0)
         {
             perror("accept");
-            exit(1);
+            exit( EXIT_FAILURE);
         }
 
         pid = fork();
         if (pid < 0)
         {
             perror("fork");
-            exit(1);
+            exit( EXIT_FAILURE);
         }
 
         if (pid == 0) /* Proceso hijo del socket */
@@ -99,18 +106,18 @@ int main( int argc, char *argv[] )
             }
 
             /* pipes full duplex */
-            if (pipe( tob ) < 0 ) {
+            if (pipe( tob ) < 0 )
+            {
                 perror( "apertura pipe" );
-                exit(1);
+                exit( EXIT_FAILURE);
             }
             if (pipe( formb ) < 0 ) {
                 perror( "apertura pipe" );
-                exit(1);
+                exit( EXIT_FAILURE);
             }
             /*Agregados */
             pfds[0].fd = newsockfd;
             pfds[0].events = POLLIN;
-
             pfds[1].fd = formb[0];
             pfds[1].events = POLLIN;
 
@@ -118,7 +125,7 @@ int main( int argc, char *argv[] )
             if (pid < 0)
             {
                 printf("Fork error \n");
-                exit(1);
+                exit( EXIT_FAILURE);
             }
             if (pid == 0 ) /* proceso hijo ejecuta bash*/
             {
@@ -149,30 +156,41 @@ int main( int argc, char *argv[] )
                 while(1)
                 {
                     poll(pfds , 2 ,-1);
-
+                    getcwd(bu,BUFF_MAX);
+                    printf("%s\n",bu);
                     if(pfds[1].revents  != 0)
                     {
-                        if((readbytes = read(formb[0], buffer, DEF_SIZE)) >= 0)
-                            write(newsockfd, buffer, (size_t )readbytes);
-
+                        if((readbytes = read(formb[0], buffer, BUFF_MAX)) < 0)
+                        {
+                            perror("lectura de pipe");
+                            exit(EXIT_FAILURE);
+                        }
+                        if(write(newsockfd, buffer, (size_t)readbytes) < 0)
+                        {
+                            perror("escritura de socket");
+                            exit(EXIT_FAILURE);
+                        }
                     }
 
                     if(pfds[0].revents  != 0)
                     {
-                        if ((readbytes = read(newsockfd, buffer, DEF_SIZE)) < 0)
+                        if ((readbytes = read(newsockfd, buffer, BUFF_MAX)) < 0)
                         {
                             perror("lectura de socket");
                             exit(EXIT_FAILURE);
                         }
                         if(strstr(buffer,"descarga::") == buffer)
                         {
-                            printf("comand descarga\n");
-                            downolad(newsockfd, inet_ntoa(cli_addr.sin_addr));
+                            printf("solicitud descarga \n");
+                            downolad(inet_ntoa(cli_addr.sin_addr));
                             continue;
                         }
-                        write(tob[1], buffer, (size_t) readbytes);
-
-                        if (strstr(buffer, "exit") != NULL)
+                        if (write(tob[1], buffer, (size_t) readbytes) < 0)
+                        {
+                            perror("escritura de pipe");
+                            exit(EXIT_FAILURE);
+                        }
+                        if (strstr(buffer, "exit") == buffer)
                             break;
                     }
                 }
@@ -191,13 +209,21 @@ int main( int argc, char *argv[] )
     return 0;
 }
 
+/**
+ *
+ * @param newsockfd int , file descritor del socekt
+ * @param buffer char*, buffer obtener datos pasado del cliente user, pass
+ * @param pass char*, password de acceso del servidor
+ * @return int , 0 exitosos , -1 de contrario.
+ */
 int authentication(int newsockfd, char* buffer, char* pass)
 {
+    /*obtener el usuario corriente*/
     struct passwd *pwd;
 
     pwd = getpwuid(geteuid());
     /*usuario*/
-    if (read(newsockfd, buffer, DEF_SIZE - 1) < 0)
+    if (read(newsockfd, buffer, BUFF_MAX - 1) < 0)
     {
         perror("lectura de socket");
         return -1;
@@ -208,7 +234,6 @@ int authentication(int newsockfd, char* buffer, char* pass)
         printf("%s\n", buffer);
         if (write(newsockfd, "unknown", 8) < 0)
             perror("escritura en socket");
-
         return -1;
     }
     else
@@ -220,7 +245,7 @@ int authentication(int newsockfd, char* buffer, char* pass)
         }
     }
     /* pass autentication */
-    if (read(newsockfd, buffer, DEF_SIZE - 1) < 0)
+    if (read(newsockfd, buffer, BUFF_MAX - 1) < 0)
     {
         perror("lectura de socket");
         return -1;
@@ -239,36 +264,31 @@ int authentication(int newsockfd, char* buffer, char* pass)
     {
         if (write(newsockfd, "rejected", 9) < 0)
             perror("escritura en socket");
-
         return -1;
     }
 }
 
-int downolad(int newsockfd, char* ip)
+/**
+ * funcion descarga archivo.
+ * @param ip char*, ip del cliente
+ * @return int 0 , descarga completa, -1 caso contrario.
+ */
+int downolad(char* ip)
 {
-
-    char path[DEF_SIZE];
-    uint16_t port = PORTUDP;
-    char vagrant[]= {"/home/sergio/CLionProjects/OSystem/TP1SO_Socket/Server/Vagrantfile"};
-    int sockfd, filefd;
+    char path[BUFFUDP_MAX];
+    char buffer[BUFFUDP_MAX];
+    char endflag[] = {"end-------"};
+    uint16_t port = PORT_UDP;
+    int     sockfd,
+            filefd;
     struct sockaddr_in dest_addr;
     struct hostent *server;
-    char buffer[SIZEBUFF];
-    char endflag[] = {"end-------"};
-    printf("%s\n",ip);
     socklen_t size_direccion;
-    int n;
+
     /* Recivo el path absoluto por tcp*/
-    memset(path, '\0', DEF_SIZE);
-    memset(buffer, '\0', SIZEBUFF);
+    memset(path, '\0', BUFFUDP_MAX);
+    memset(buffer, '\0', BUFFUDP_MAX);
 
-
-
-    /*buffer[n]=0;
-    strcpy(path,"./");
-    strcat(path, buffer);*/
-    printf("path %s\n",vagrant);
-    /* busca por ip */
     server = gethostbyname(ip);
     if ( server == NULL ) {
         perror("ERROR, no existe el host\n");
@@ -290,47 +310,50 @@ int downolad(int newsockfd, char* ip)
     size_direccion = sizeof( dest_addr );
 
     /* comunicacion previa */
-    /* comunicacion previa */
     if (sendto(sockfd, "path" , strlen("path"), 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
     {
         perror("Escritura en socket");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    if (recvfrom(sockfd, (void *) buffer, SIZEBUFF, 0, (struct sockaddr *) &dest_addr, &size_direccion) < 0)
+    if (recvfrom(sockfd, (void *) buffer, BUFFUDP_MAX-1, 0, (struct sockaddr *) &dest_addr, &size_direccion) < 0)
     {
         perror("Lectura de socket");
-        return -1;
+        exit(EXIT_FAILURE);
     }
 
-    printf("%s\n",buffer);
+    buffer[strlen(buffer)-1]='\0';
+    strcpy(path,"./");
+    strcat(path, buffer);
+    printf("path %s\n",path);
+    /* busca por ip */
 
-    filefd = open(vagrant, O_RDONLY);
+
+    filefd = open(path, O_RDONLY);
     if(filefd < 0)
     {
         perror("open file");
-        return -1;
+        return -1 ;
     }
 
-    memset(buffer, 0, SIZEBUFF);
+    memset(buffer, 0, BUFFUDP_MAX);
 
-    while ( read(filefd, buffer, SIZEBUFF) > 0)
+    while ( read(filefd, buffer, BUFFUDP_MAX) > 0)
     {
-        if (sendto(sockfd, (void *) buffer, SIZEBUFF, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
+        if (sendto(sockfd, (void *) buffer, BUFFUDP_MAX, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
         {
             perror("Escritura en socket");
-            return -1;
+            exit(EXIT_FAILURE);
         }
-        memset(buffer, 0, SIZEBUFF);
-        printf("env..\n");
+        memset(buffer, 0, BUFFUDP_MAX);
     }
 
     if (sendto(sockfd, (void *) endflag, strlen(endflag), 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
     {
         perror("Escritura en socket");
-        return -1;
+        exit(EXIT_FAILURE);
     }
-    printf("findescarga\n");
+    printf("fin descarga\n");
     return 0;
 }
 
