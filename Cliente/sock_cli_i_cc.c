@@ -79,7 +79,6 @@ int command(char* u, char* i, char* p)
         return -1;
       }
     user = strstr(prompt, " " );
-
     /*verificar el ingreso usuario*/
     if (user == NULL)
       {
@@ -88,7 +87,6 @@ int command(char* u, char* i, char* p)
       }
     user = user + 1;
     ip = strstr(prompt, "@" );
-
     /*verificar el ingreso ip*/
     if(ip == NULL)
       {
@@ -374,7 +372,6 @@ int download (char* name)
 
     uint16_t    puerto = PORT_UDP;
     socklen_t   size_direccion;
-
 
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
