@@ -188,10 +188,10 @@ int main( int argc, char *argv[] )
                       {
                         if ((readbytes = read(newsockfd, buffer, BUFF_MAX)) < 0)
                           {
-                            perror("lectura de;
+                              perror("lectura de socket");
+                              exit(EXIT_FAILURE);
                           }
-                        if(strstr(buffer,"desc socket\");\n"
-                                "                            exit(EXIT_FAILURE)arga::") == buffer)
+                        if(strstr(buffer,"descarga::") == buffer)
                           {
                             printf("# solicitud descarga.\n");
                             downolad(pathtk, inet_ntoa(cli_addr.sin_addr));
