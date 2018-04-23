@@ -1,4 +1,5 @@
 CC = gcc
+CFLAGS = -Wall -Werror -pedantic
 sock_srv_i_cc : sock_srv_i_cc.o bash.o
 	$(CC) -o server sock_srv_i_cc.o
 	$(CC) -o bash bash.o
