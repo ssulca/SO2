@@ -10,16 +10,15 @@
 #include <unistd.h>
 #include <poll.h>
 #include <termios.h>
-#include <fcntl.h>
 #include <libgen.h>
 
-#define BUFF_MAX 512
+#define BUFF_MAX 1024
 #define PROMPT_MAX 256
 #define USER_MAX 32
 #define IP_MAX 13
 #define PORT_MAX 6
 #define PASS_MAX 16
-#define BUFFUDP_MAX 1024
+#define BUFFUDP_MAX 2048
 #define PORT_UDP 5000
 
 int command(char* u, char* i, char* p);
@@ -362,17 +361,17 @@ int get_pass( char *buffer)
 int download (char* name)
 {
     int     sockfd,
-            readbytes,
-            filefd;
-
-    char    buffer[BUFFUDP_MAX];
+            readbytes;
     char    endflag[] = {"end-------"};
+    char    ackflag[] = {"ack-------"};
+    char    buffer[BUFFUDP_MAX];
     struct  sockaddr_in serv_addr;
-    struct  timeval timeout = {10, 0}; //set timeout for 10 seconds
-
-    uint16_t    puerto = PORT_UDP;
+    struct  timeval     timeout = {10, 0}; //set timeout for 10 seconds
+    FILE*   fout;
     socklen_t   size_direccion;
+    uint16_t    puerto = PORT_UDP;
 
+    //unsigned  int fileSize;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
       {
@@ -395,7 +394,6 @@ int download (char* name)
         perror( "ERROR en binding" );
         return -1;
       }
-    printf("# Socket disponible: %d.\n", ntohs(serv_addr.sin_port) );
 
     size_direccion = sizeof( struct sockaddr );
 
@@ -405,7 +403,7 @@ int download (char* name)
     if ( recvfrom( sockfd, buffer, BUFFUDP_MAX-1, 0, (struct sockaddr *)&serv_addr, &size_direccion ) < 0)
       {
         perror( "lectura de socket or timeout" );
-        exit(EXIT_FAILURE);
+          return -1 ;
       }
     if(strstr(buffer,"path") != buffer) /*el server requiere el nombre del archivo */
         return -1;
@@ -421,34 +419,42 @@ int download (char* name)
     name[strlen(name)-1] = '\0';
     printf("# Downloading...\n");
 
-    /* Abre el arivo o lo crea*/
-    filefd = open(name, O_RDWR | O_CREAT, 0666);
+    /* Abre el arivo o lo crea */
+    fout = fopen(name,"wb");
+
+    if(fout == NULL){
+        perror("file open error");
+        close(sockfd);
+        return -1;
+    }
 
     memset( buffer, 0, BUFFUDP_MAX );
-    while ((readbytes = (int)recvfrom(sockfd, buffer, BUFFUDP_MAX-1, 0,(struct sockaddr *)&serv_addr,
+    while ((readbytes = (int)recvfrom(sockfd, buffer, BUFFUDP_MAX, 0,(struct sockaddr *)&serv_addr,
             &size_direccion)) > 0)
       {
         if( strstr(buffer, endflag) == buffer)/* verificar si termino la descarga */
           {
             printf("# Descarga completa.\n");
-            close(filefd);
+            fclose(fout);
             close(sockfd);
             return 0;
           }
-        /* escribir datos en el archivo*/
-        if(write(filefd, buffer, (size_t)readbytes) < 0)
-          {
-            perror("escritura en socket");
-            return -1;
-          }
+        /* escribir datos en el archivo */
+        fwrite(buffer, 1, (size_t )readbytes,fout);
         memset( buffer, 0, BUFFUDP_MAX );
+
+        if (sendto(sockfd, (void *) ackflag, strlen(ackflag), 0, (struct sockaddr *) &serv_addr, size_direccion) < 0)
+          {
+              perror("Escritura en socket");
+              fclose(fout);
+              exit(EXIT_FAILURE);
+          }
+          memset(buffer, 0, BUFFUDP_MAX);
       }
     if(readbytes < 0) /* error de lectura del socket o cumplir el timeout */
-      {
         perror( "lectura de socket or timeout" );
-        return -1;
-      }
     close(sockfd);
+    fclose(fout);
     /*cualquier otro error*/
     return -1;
 }

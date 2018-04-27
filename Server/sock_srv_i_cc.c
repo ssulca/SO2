@@ -11,11 +11,10 @@
 #include <poll.h>
 #include <pwd.h>
 #include <netdb.h>
-#include <fcntl.h>
 #include <arpa/inet.h>
 
-#define BUFF_MAX 512
-#define BUFFUDP_MAX 1024
+#define BUFF_MAX 1024
+#define BUFFUDP_MAX 2048
 #define PORT_UDP 5000
 #define PORT_TCP 6020
 
@@ -287,17 +286,19 @@ int authentication(int newsockfd, char* buffer, char* pass)
  */
 int downolad(char *pathtk, char *ip)
 {
-    char path[BUFFUDP_MAX];
-    char buffer[BUFFUDP_MAX];
-    char endflag[] = {"end-------"};
-    uint16_t port = PORT_UDP;
-    int     sockfd,
-            filefd;
+    char    endflag[] = {"end-------"};
+    char    ackflag[] = {"ack-------"};
+    char    path[BUFFUDP_MAX];
+    char    buffer[BUFFUDP_MAX];
+    int     sockfd;
+    struct  sockaddr_in  dest_addr;
+    struct  hostent      *server;
+    struct  timeval     timeout = {10, 0}; //set timeout for 10 seconds
+    FILE    *fin;
 
-    socklen_t size_direccion;
-
-    struct sockaddr_in  dest_addr;
-    struct hostent      *server;
+    uint16_t    port = PORT_UDP;
+    socklen_t   size_direccion;
+    size_t      bytesread = 0;
 
     /* Recivo el path absoluto por tcp*/
     memset(path, '\0', BUFFUDP_MAX);
@@ -316,6 +317,8 @@ int downolad(char *pathtk, char *ip)
         perror( "apertura de socket" );
         return -1;
       }
+
+    setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, (char*)&timeout, sizeof(struct timeval));
 
     /* Carga de la familia de direccioens */
     dest_addr.sin_family = AF_INET;
@@ -344,33 +347,49 @@ int downolad(char *pathtk, char *ip)
     strcat(path, "/");
     strcat(path, buffer);
     printf("path %s\n",path);
-    /* busca por ip */
 
-
-    filefd = open(path, O_RDONLY);
-    if(filefd < 0)
-      {
-        perror("open file");
-        return -1 ;
-      }
-
+    fin =fopen(path,"rb");
+    if(fin == NULL){
+        perror("opening file ERROR");
+        close(sockfd);
+        return -1;
+    }
     memset(buffer, 0, BUFFUDP_MAX);
 
-    while ( read(filefd, buffer, BUFFUDP_MAX) > 0)
+    while ( !feof(fin))
       {
-        if (sendto(sockfd, (void *) buffer, BUFFUDP_MAX, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
+        bytesread = fread(buffer,1,BUFFUDP_MAX,  fin);
+        if (sendto(sockfd, (void *) buffer, bytesread, 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
           {
             perror("Escritura en socket");
+            fclose(fin);
             exit(EXIT_FAILURE);
           }
+        if (recvfrom(sockfd, (void *) buffer, BUFFUDP_MAX-1, 0, (struct sockaddr *) &dest_addr, &size_direccion) < 0)
+          {
+              perror("lectura de socket or timeout" );
+              printf("# error descarga.\n");
+              fclose(fin);
+              close(sockfd);
+              return -1;
+          }
+         if(strstr(buffer,ackflag) == NULL)
+           {
+             printf("# error en secuencia.");
+             fclose(fin);
+             close(sockfd);
+             return -1;
+           }
         memset(buffer, 0, BUFFUDP_MAX);
       }
 
     if (sendto(sockfd, (void *) endflag, strlen(endflag), 0, (struct sockaddr *) &dest_addr, size_direccion) < 0)
       {
         perror("Escritura en socket");
+        fclose(fin);
         exit(EXIT_FAILURE);
       }
+    fclose(fin);
     printf("fin descarga\n");
     close(sockfd);
     return 0;
