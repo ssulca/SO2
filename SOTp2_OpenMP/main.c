@@ -28,7 +28,8 @@ int main()
     int     a_gates[SAMPLES_MAX]; /* vector de gates */
     int     pos_pulso[SAMPLES_MAX]; /* posicion en memoria de cada pulso */
 
-    int     resto_add,
+    int     resto,
+            resto_add,
             gate_local,
             valids_count;
 
@@ -78,15 +79,17 @@ int main()
 
     //printf("numero de pulsos %i\n",pulsos);
     fclose (filep);
-
+    int a_loal[GATE_MAX];
     for (int index_pulso = 0; index_pulso < SAMPLES_MAX; index_pulso++)
     {
-        resto_add = valid_samples[index_pulso] % GATE_MAX;
+        resto = valid_samples[index_pulso] % GATE_MAX;
         ptr_buffer = pos_pulso[index_pulso];
         valids_count = 0;
+        resto_add = 0;
 
         for (int  index_gate = 0; index_gate < GATE_MAX ; index_gate++)
         {
+            resto_add += resto;
             if (resto_add  >= GATE_MAX)
             {
                 gate_local = a_gates[index_pulso] + 1;
@@ -95,6 +98,8 @@ int main()
             else {
                 gate_local = a_gates[index_pulso];
             }
+            if(index_pulso == 0)
+                a_loal[index_gate] = gate_local;
 
             cont_v = 0;
             cont_h = 0;
@@ -126,6 +131,10 @@ int main()
             printf("h_M[puso %i][gate %i] = %f\n",j ,i , pulsos_h_gate[j][i]);
             printf("v_M[puso %i][gate %i] = %f\n",j ,i , pulsos_v_gate[j][i]);
         }
+    }
+
+    for (int k = 0; k < 20; ++k) {
+        printf("local_g[%i] = %i\n",k , a_loal[k]);
     }
 
     return 0;

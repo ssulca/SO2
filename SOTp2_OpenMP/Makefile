@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -Wall -Werror -pedantic
+# CFLAGS = -Wall -Werror -pedantic
 LFLAGS = -lm
 
 sock_srv_i_cc : main.o
