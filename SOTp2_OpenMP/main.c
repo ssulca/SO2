@@ -4,9 +4,10 @@
 #include <memory.h>
 #include <math.h>
 
-#define SAMPLES_MAX 800
+#define PULSOS_MAX 800
 
 #define GATE_MAX 500 /* 2 x 250 */
+#define GRADOS_MAX 8
 
 struct complex
 {
@@ -19,52 +20,55 @@ double modulo(struct complex znum);
 int main()
 {
 
-    long    file_size;
-    long    ptr_buffer = 0;
+    long    file_size,
+            ptr_buffer = 0;
 
-    char    *buffer; /* buffer para recuperar los datos */
+    void    *buffer; /* buffer para recuperar los datos */
 
-   // int     pulsos = 0; /* cantidad de pulsos */
-    int     a_gates[SAMPLES_MAX]; /* vector de gates */
-    int     pos_pulso[SAMPLES_MAX]; /* posicion en memoria de cada pulso */
-
-    int     resto,
+    int     a_gates[PULSOS_MAX], /* vector de gates */
+            pos_pulso[PULSOS_MAX], /* posicion en memoria de cada pulso */
+            resto,
             resto_add,
             gate_local,
             valids_count;
 
-    double  cont_v = 0,
-            cont_h = 0 ;
+    double  pulsos_v_gate[PULSOS_MAX][GATE_MAX],
+            pulsos_h_gate[PULSOS_MAX][GATE_MAX],
+            cont_v,
+            cont_h;
 
-    double   pulsos_v_gate[SAMPLES_MAX][GATE_MAX];
-    double   pulsos_h_gate[SAMPLES_MAX][GATE_MAX];
+    double  autocorr_v[GATE_MAX],
+            autocorr_h[GATE_MAX],
+            sumador_v,
+            sumador_h;
 
     struct complex muestra_z;
-    //size_t  read_bytes;
-    uint16_t valid_samples[SAMPLES_MAX];
+
+    uint16_t valid_samples[PULSOS_MAX];
 
     FILE    *filep;
 
-    filep = fopen ("./pulsos.iq", "rb");
+    filep = fopen ("/home/sergio/CLionProjects/sulca/SOTp2_OpenMP/pulsos.iq", "rb");
     if(filep == NULL)
     {
-        perror("opening file ERROR");
+        perror("# opening file ERROR");
         exit(EXIT_FAILURE);
     }
 
-    fseek ( filep, 0L, SEEK_END ); /**/
+    fseek ( filep, 0L, SEEK_END );
     file_size = ftell ( filep );
     fseek ( filep, 0, SEEK_SET );
 
     buffer = (char *) malloc((size_t)file_size + 1);
     if ( buffer == NULL)
     {
-        printf("# Memory error malloc! \n" );
+        perror("# Memory error malloc! \n" );
         fclose (filep);
         exit(EXIT_FAILURE);
     }
 
-    fread ( buffer, (size_t)file_size, 1, filep);
+    fread(buffer, (size_t)file_size, 1, filep);
+    fclose(filep);
 
     for (int i = 0; ptr_buffer < file_size; i++)
     {
@@ -77,10 +81,7 @@ int main()
         a_gates[i] =  valid_samples[i] / GATE_MAX;
     }
 
-    //printf("numero de pulsos %i\n",pulsos);
-    fclose (filep);
-    int a_loal[GATE_MAX];
-    for (int index_pulso = 0; index_pulso < SAMPLES_MAX; index_pulso++)
+    for (int index_pulso = 0; index_pulso < PULSOS_MAX; index_pulso++)
     {
         resto = valid_samples[index_pulso] % GATE_MAX;
         ptr_buffer = pos_pulso[index_pulso];
@@ -95,11 +96,8 @@ int main()
                 gate_local = a_gates[index_pulso] + 1;
                 resto_add -= GATE_MAX;
             }
-            else {
+            else
                 gate_local = a_gates[index_pulso];
-            }
-            if(index_pulso == 0)
-                a_loal[index_gate] = gate_local;
 
             cont_v = 0;
             cont_h = 0;
@@ -122,19 +120,25 @@ int main()
         }
     }
 
-
     free (buffer);
-    //printf("Hello, World!\n");
 
-    for (int j = 0; j < 10 ; ++j) {
-        for (int i = 0; i < 10 ; ++i) {
-            printf("h_M[puso %i][gate %i] = %f\n",j ,i , pulsos_h_gate[j][i]);
-            printf("v_M[puso %i][gate %i] = %f\n",j ,i , pulsos_v_gate[j][i]);
+    for ( int i = 0; i < GATE_MAX  ; i++ )
+    {
+        sumador_v = 0;
+        sumador_h = 0;
+
+        for ( int j = 0; j < PULSOS_MAX - 1; j++ )
+        {
+            sumador_v += pulsos_v_gate[i][j] * pulsos_v_gate[i][j + 1];
+            sumador_h += pulsos_h_gate[i][j] * pulsos_h_gate[i][j + 1];
         }
+        autocorr_v[i] = sumador_v / PULSOS_MAX;
+        autocorr_h[i] = sumador_h / PULSOS_MAX;
     }
 
-    for (int k = 0; k < 20; ++k) {
-        printf("local_g[%i] = %i\n",k , a_loal[k]);
+    for (int k = 0; k < 10; k++) {
+        printf("correlacion_h[%i]= %lf\n", k , autocorr_h[k]);
+        printf("correlacion_v[%i]= %lf\n", k , autocorr_v[k]);
     }
 
     return 0;
