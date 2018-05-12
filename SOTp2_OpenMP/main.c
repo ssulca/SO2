@@ -1,3 +1,6 @@
+//
+// Created by sergio on 6/05/18.
+//
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -151,7 +154,6 @@ int main()
         fwrite(&aux, sizeof(int), 1,fileout);
         fwrite(autocorr_h[idx_grado], sizeof(double), GATE_MAX, fileout);
         fwrite(autocorr_v[idx_grado], sizeof(double), GATE_MAX, fileout);
-
     }
     fclose(fileout);
     return 0;
