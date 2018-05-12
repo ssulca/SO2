@@ -4,10 +4,10 @@
 #include <memory.h>
 #include <math.h>
 
-#define PULSOS_MAX 800
-
+#define ALL_PULSOS 800
+#define PULSOS 100
 #define GATE_MAX 500 /* 2 x 250 */
-#define GRADOS_MAX 8
+#define GRADOS 8
 
 struct complex
 {
@@ -23,52 +23,53 @@ int main()
     long    file_size,
             ptr_buffer = 0;
 
-    void    *buffer; /* buffer para recuperar los datos */
+    char    *buffer; /* buffer para recuperar los datos */
 
-    int     a_gates[PULSOS_MAX], /* vector de gates */
-            pos_pulso[PULSOS_MAX], /* posicion en memoria de cada pulso */
+    int     a_gates[ALL_PULSOS], /* vector de gates */
+            pos_pulso[ALL_PULSOS], /* posicion en memoria de cada pulso */
             resto,
             resto_add,
             gate_local,
             valids_count;
 
-    double  pulsos_v_gate[PULSOS_MAX][GATE_MAX],
-            pulsos_h_gate[PULSOS_MAX][GATE_MAX],
+    double  pulsos_v_gate[ALL_PULSOS][GATE_MAX],
+            pulsos_h_gate[ALL_PULSOS][GATE_MAX],
             cont_v,
             cont_h;
 
-    double  autocorr_v[GATE_MAX],
-            autocorr_h[GATE_MAX],
+    double  autocorr_v[GRADOS][GATE_MAX],
+            autocorr_h[GRADOS][GATE_MAX],
             sumador_v,
             sumador_h;
 
     struct complex muestra_z;
 
-    uint16_t valid_samples[PULSOS_MAX];
+    uint16_t valid_samples[ALL_PULSOS];
 
-    FILE    *filep;
+    FILE    *filein;
+    FILE    *fileout;
 
-    filep = fopen ("/home/sergio/CLionProjects/sulca/SOTp2_OpenMP/pulsos.iq", "rb");
-    if(filep == NULL)
+    filein = fopen ("/home/sergio/CLionProjects/sulca/SOTp2_OpenMP/pulsos.iq", "rb");
+    if(filein == NULL)
     {
         perror("# opening file ERROR");
         exit(EXIT_FAILURE);
     }
 
-    fseek ( filep, 0L, SEEK_END );
-    file_size = ftell ( filep );
-    fseek ( filep, 0, SEEK_SET );
+    fseek ( filein, 0L, SEEK_END );
+    file_size = ftell ( filein );
+    fseek ( filein, 0, SEEK_SET );
 
     buffer = (char *) malloc((size_t)file_size + 1);
     if ( buffer == NULL)
     {
         perror("# Memory error malloc! \n" );
-        fclose (filep);
+        fclose (filein);
         exit(EXIT_FAILURE);
     }
 
-    fread(buffer, (size_t)file_size, 1, filep);
-    fclose(filep);
+    fread(buffer, (size_t)file_size, 1, filein);
+    fclose(filein);
 
     for (int i = 0; ptr_buffer < file_size; i++)
     {
@@ -81,66 +82,78 @@ int main()
         a_gates[i] =  valid_samples[i] / GATE_MAX;
     }
 
-    for (int index_pulso = 0; index_pulso < PULSOS_MAX; index_pulso++)
+    for (int idx_puls = 0; idx_puls < ALL_PULSOS; idx_puls++)
     {
-        resto = valid_samples[index_pulso] % GATE_MAX;
-        ptr_buffer = pos_pulso[index_pulso];
+        resto = valid_samples[idx_puls] % GATE_MAX;
+        ptr_buffer = pos_pulso[idx_puls];
         valids_count = 0;
         resto_add = 0;
 
-        for (int  index_gate = 0; index_gate < GATE_MAX ; index_gate++)
+        for (int  idx_gate = 0; idx_gate < GATE_MAX ; idx_gate++)
         {
             resto_add += resto;
             if (resto_add  >= GATE_MAX)
             {
-                gate_local = a_gates[index_pulso] + 1;
+                gate_local = a_gates[idx_puls] + 1;
                 resto_add -= GATE_MAX;
             }
             else
-                gate_local = a_gates[index_pulso];
+                gate_local = a_gates[idx_puls];
 
             cont_v = 0;
             cont_h = 0;
 
-            for ( int i = 0; i < gate_local && valids_count < valid_samples[index_pulso]; i++)
+            for ( int i = 0; i < gate_local && valids_count < valid_samples[idx_puls]; i++)
             {
                 memmove(&muestra_z, &buffer[ptr_buffer], sizeof (struct complex));
                 cont_v += modulo(muestra_z);
 
                 memmove(&muestra_z,
-                        &buffer[ptr_buffer + valid_samples[index_pulso] * sizeof(struct complex)],
+                        &buffer[ptr_buffer + valid_samples[idx_puls] * sizeof(struct complex)],
                         sizeof(struct complex));
                 cont_h += modulo(muestra_z);
 
                 ptr_buffer += sizeof(struct complex);
                 valids_count ++;
             }
-            pulsos_v_gate[index_pulso][index_gate] = cont_v / gate_local;
-            pulsos_h_gate[index_pulso][index_gate] = cont_h / gate_local;
+            pulsos_v_gate[idx_puls][idx_gate] = cont_v / gate_local;
+            pulsos_h_gate[idx_puls][idx_gate] = cont_h / gate_local;
         }
     }
 
     free (buffer);
 
-    for ( int i = 0; i < GATE_MAX  ; i++ )
+    for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
     {
-        sumador_v = 0;
-        sumador_h = 0;
-
-        for ( int j = 0; j < PULSOS_MAX - 1; j++ )
+        for ( int idx_gate = 0; idx_gate < GATE_MAX  ; idx_gate++ )
         {
-            sumador_v += pulsos_v_gate[i][j] * pulsos_v_gate[i][j + 1];
-            sumador_h += pulsos_h_gate[i][j] * pulsos_h_gate[i][j + 1];
+            sumador_v = 0;
+            sumador_h = 0;
+
+            for ( int idx_pulso = 0; idx_pulso < (PULSOS - 1) ; idx_pulso++ )
+            {
+                sumador_v += pulsos_v_gate[(PULSOS * idx_grado) + idx_pulso][idx_gate] *
+                             pulsos_v_gate[(PULSOS * idx_grado) + idx_pulso + 1][idx_gate];
+
+                sumador_h += pulsos_h_gate[(PULSOS * idx_grado) + idx_pulso][idx_gate] *
+                             pulsos_h_gate[(PULSOS * idx_grado) + idx_pulso + 1][idx_gate];
+            }
+            autocorr_v[idx_grado][idx_gate] = sumador_v / 100.0;
+            autocorr_h[idx_grado][idx_gate] = sumador_h / 100.0;
         }
-        autocorr_v[i] = sumador_v / PULSOS_MAX;
-        autocorr_h[i] = sumador_h / PULSOS_MAX;
     }
 
-    for (int k = 0; k < 10; k++) {
-        printf("correlacion_h[%i]= %lf\n", k , autocorr_h[k]);
-        printf("correlacion_v[%i]= %lf\n", k , autocorr_v[k]);
-    }
+    int aux = 0;
+    fileout = fopen("./proccess.outln","wb");
+    for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
+    {
+        aux = idx_grado + 83;
+        fwrite(&aux, sizeof(int), 1,fileout);
+        fwrite(autocorr_h[idx_grado], sizeof(double), GATE_MAX, fileout);
+        fwrite(autocorr_v[idx_grado], sizeof(double), GATE_MAX, fileout);
 
+    }
+    fclose(fileout);
     return 0;
 }
 
