@@ -12,6 +12,7 @@ int main()
 
     long   file_size,
            ptr_buffer = 0;
+    double coorre[500]; /*correalacion del canal h del angulo 83*/
     char * buffer;
     int  correlacion_pos[8];
     int angulos[8];
@@ -52,5 +53,15 @@ int main()
     for (int j = 0; j < 8; ++j) {
         printf("angulo %i\n",angulos[j]);
     }
+    ptr_buffer = correlacion_pos[0];
+    for ( int i = 0; i < 500 ; i++)
+    {
+        memmove(&coorre[i], &buffer[ptr_buffer], sizeof(double));
+        ptr_buffer += sizeof(double);
+        printf("coore = %lf\n",coorre[i]);
+    }
+
+    printf("angulo %lf\n",(double)buffer[correlacion_pos[0]]);
+
     return 0;
 }
