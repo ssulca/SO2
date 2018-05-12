@@ -1,6 +1,7 @@
 CC = gcc
-# CFLAGS = -Wall -Werror -pedantic
-LFLAGS = -lm
+
+CFLAGS = -fopenmp -Wall -Werror -pedantic
+LFLAGS = -lm -fopenmp
 
 OpenMP : main.o
 	$(CC) -o openmp main.o $(LFLAGS)

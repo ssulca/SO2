@@ -12,14 +12,16 @@ int main()
 
     long   file_size,
            ptr_buffer = 0;
-    double coorre[500]; /*correalacion del canal h del angulo 83*/
-    char * buffer;
-    int  correlacion_pos[8];
-    int angulos[8];
-    FILE    *filein;
-    FILE    *fileout;
 
-    filein = fopen ("/home/sergio/CLionProjects/sulca/SOTp2_OpenMP/proccess.outln", "rb");
+    double  coorre[500]; /*correalacion del canal h del angulo 83*/
+    char    *buffer;
+
+    int correlacion_pos[8];
+    int angulos[8];
+
+    FILE    *filein;
+
+    filein = fopen ("./proccess.outln", "rb");
     if(filein == NULL)
     {
         perror("# opening file ERROR");
@@ -44,12 +46,10 @@ int main()
     for (int i = 0; ptr_buffer < file_size; i++)
     {
         correlacion_pos[i] = ptr_buffer + sizeof(int);
-        /* Obtengo cantidad de muestras */
         memmove ( &angulos[i], &buffer[ptr_buffer], sizeof(int));
-        /* actualizo puntero, 4 por F y Q de V y H */
         ptr_buffer += sizeof(int) + 2*500 * sizeof(double);
-        /* Calculo de Gate para cada pulso */
     }
+
     for (int j = 0; j < 8; ++j) {
         printf("angulo %i\n",angulos[j]);
     }
@@ -60,8 +60,6 @@ int main()
         ptr_buffer += sizeof(double);
         printf("coore = %lf\n",coorre[i]);
     }
-
-    printf("angulo %lf\n",(double)buffer[correlacion_pos[0]]);
 
     return 0;
 }
