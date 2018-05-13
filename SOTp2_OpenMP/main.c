@@ -19,8 +19,6 @@ struct complex
     float quad;
 };
 
-double modulo(struct complex znum);
-
 int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_gates,
             double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX],
             const char * buffer);
@@ -51,6 +49,9 @@ int main( int argc, char *argv[] )
 
     FILE    *filein; /* Puntero de archivo de lectura*/
     FILE    *fileout; /* Puntero de archivo de escritura pos-processamiento*/
+
+    double start = omp_get_wtime();
+    double tock;
 
     if(argc > 1)
         thilo = (int) strtol(argv[1],NULL,10);
@@ -95,16 +96,26 @@ int main( int argc, char *argv[] )
         a_gates[i] =  valid_samples[i] / GATE_MAX; /* Calculo de Gate tentativo para cada pulso */
     }
 
+    tock = omp_get_wtime();
+    printf("lectura = %lf s\n",tock-start);
     /* procesameiento para obtener la matriz pulso gate */
-    process(valid_samples, pos_pulso, a_gates, pulsos_v_gate, pulsos_h_gate, buffer);
+    tock = omp_get_wtime();
 
+    process(valid_samples, pos_pulso, a_gates, pulsos_v_gate, pulsos_h_gate, buffer);
     free (buffer);
 
+    printf("process = %lf s\n",omp_get_wtime() - tock);
+
     /* calculo de la autocorrelacion para cada grado_gate  */
+    tock = omp_get_wtime();
+
     correlacion(autocorr_v, autocorr_h ,pulsos_v_gate , pulsos_h_gate);
 
-    fileout = fopen("./proccess.outln","wb");
+    printf("correlacion = %lf s\n",omp_get_wtime() - tock);
 
+    tock = omp_get_wtime();
+
+    fileout = fopen("./proccess.outln","wb");
     for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
     {
         grado_aux ++;
@@ -113,6 +124,8 @@ int main( int argc, char *argv[] )
         fwrite(autocorr_v[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar v*/
     }
     fclose(fileout);
+    printf("Escitura = %lf s\n",omp_get_wtime() - tock);
+    printf("total = %lf s\n",omp_get_wtime() - start);
     return 0;
 }
 
@@ -167,12 +180,12 @@ int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_
             for (int i = 0; i < gate_local && valids_count < valid_samples[idx_puls]; i++)
             {
                 memmove(&muestra_z, &buffer[ptr_buffer], sizeof(struct complex)); /* obtencion de muestra */
-                cont_v += modulo(muestra_z); /*se acumulan muestras en modulo para el canal v*/
+                cont_v += sqrt(pow(muestra_z.phas,2) + pow(muestra_z.quad, 2)); /*modulo para el canal v*/
 
                 memmove(&muestra_z,
                         &buffer[ptr_buffer + valid_samples[idx_puls] * sizeof(struct complex)],
                         sizeof(struct complex));
-                cont_h += modulo(muestra_z); /*se acumulan muestras en modulo para el canal h*/
+                cont_h += sqrt(pow(muestra_z.phas,2) + pow(muestra_z.quad, 2)); /*se acumulan muestras en modulo para el canal h*/
 
                 ptr_buffer += sizeof(struct complex);
                 valids_count++;
@@ -221,14 +234,4 @@ int correlacion(double autocorr_v[GRADOS][GATE_MAX],double  autocorr_h[GRADOS][G
     }
 
     return 0;
-}
-
-/**
- * funcion para calular el modulo de un numero complejo
- * @param znum struct complex, numero complejo,
- * @return  double, el modulo del numero complejo.
- */
-double modulo(struct complex znum)
-{
-    return sqrt( pow(znum.phas,2) + pow(znum.quad, 2));
 }
