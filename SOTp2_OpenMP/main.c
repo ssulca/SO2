@@ -21,7 +21,7 @@ struct complex
 
 double modulo(struct complex znum);
 
-int main()
+int main( int argc, char *argv[] )
 {
     long    file_size,
             ptr_buffer = 0;
@@ -36,6 +36,7 @@ int main()
             valids_count;
 
     int     grado_aux = 82; /* aux para almacenar grado */
+    int     thilo = 0;
 
     double  pulsos_v_gate[ALL_PULSOS][GATE_MAX],
             pulsos_h_gate[ALL_PULSOS][GATE_MAX],
@@ -53,6 +54,15 @@ int main()
 
     FILE    *filein; /* Puntero de archivo de lectura*/
     FILE    *fileout; /* Puntero de archivo de escritura pos-processamiento*/
+
+
+    if(argc > 1)
+        thilo = (int) strtol(argv[1],NULL,10);
+
+    if (thilo == 0)
+        thilo = 1;
+
+    omp_set_num_threads(thilo);
 
     filein = fopen ("./pulsos.iq", "rb");
     if(filein == NULL)
