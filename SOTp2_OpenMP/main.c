@@ -21,6 +21,13 @@ struct complex
 
 double modulo(struct complex znum);
 
+int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_gates,
+            double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX],
+            const char * buffer);
+
+int correlacion(double autocorr_v[GRADOS][GATE_MAX],double  autocorr_h[GRADOS][GATE_MAX],
+                double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX]);
+
 int main( int argc, char *argv[] )
 {
     int     file_size,
@@ -29,32 +36,21 @@ int main( int argc, char *argv[] )
     char    *buffer; /* buffer para recuperar los datos */
 
     int     a_gates[ALL_PULSOS], /* vector de gates */
-            pos_pulso[ALL_PULSOS], /* posicion en memoria de cada pulso */
-            resto,
-            resto_add,
-            gate_local,
-            valids_count;
+            pos_pulso[ALL_PULSOS]; /* posicion en memoria de cada pulso */
 
     int     grado_aux = 82; /* aux para almacenar grado */
     int     thilo = 0;
 
     double  pulsos_v_gate[ALL_PULSOS][GATE_MAX],
-            pulsos_h_gate[ALL_PULSOS][GATE_MAX],
-            cont_v,
-            cont_h;
+            pulsos_h_gate[ALL_PULSOS][GATE_MAX];
 
     double  autocorr_v[GRADOS][GATE_MAX], /* autocorrelacion del canal horizontal*/
-            autocorr_h[GRADOS][GATE_MAX], /* autocorrelacion del canal vertical*/
-            sumador_v,
-            sumador_h;
-
-    struct complex muestra_z; /* estructura para obtener los datos de una muestra */
+            autocorr_h[GRADOS][GATE_MAX]; /* autocorrelacion del canal vertical*/
 
     uint16_t valid_samples[ALL_PULSOS]; /* vector de todos los valid samples*/
 
     FILE    *filein; /* Puntero de archivo de lectura*/
     FILE    *fileout; /* Puntero de archivo de escritura pos-processamiento*/
-
 
     if(argc > 1)
         thilo = (int) strtol(argv[1],NULL,10);
@@ -99,6 +95,52 @@ int main( int argc, char *argv[] )
         a_gates[i] =  valid_samples[i] / GATE_MAX; /* Calculo de Gate tentativo para cada pulso */
     }
 
+    /* procesameiento para obtener la matriz pulso gate */
+    process(valid_samples, pos_pulso, a_gates, pulsos_v_gate, pulsos_h_gate, buffer);
+
+    free (buffer);
+
+    /* calculo de la autocorrelacion para cada grado_gate  */
+    correlacion(autocorr_v, autocorr_h ,pulsos_v_gate , pulsos_h_gate);
+
+    fileout = fopen("./proccess.outln","wb");
+
+    for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
+    {
+        grado_aux ++;
+        fwrite(&grado_aux, sizeof(int), 1,fileout); /*se escribe en numero de grado al que pertenece los datos */
+        fwrite(autocorr_h[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar h*/
+        fwrite(autocorr_v[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar v*/
+    }
+    fclose(fileout);
+    return 0;
+}
+
+/**
+ * procesameiento para obtener la matriz pulso gate
+ * @param valid_samples uiint16_t, vector que contiene los valid samples de cada pulso.
+ * @param pos_pulso int , vector posicon en memoria de cada pulso
+ * @param a_gates int , vector que contiene la cantindad de  gate tentativos
+ * @param pulsos_v_gate int, matriz que contiene la pulsos por pulso del canal v
+ * @param pulsos_h_gate int, matriz que contiene la pulsos por pulso del canal h
+ * @param buffer
+ * @return
+ */
+int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_gates,
+            double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX],
+            const char * buffer)
+{
+    int resto,
+        resto_add,
+        gate_local,
+        valids_count,
+        ptr_buffer = 0;
+
+    double  cont_v,
+            cont_h;
+
+    struct complex muestra_z; /* estructura para obtener los datos de una muestra */
+
     #pragma omp parallel for private(resto, ptr_buffer,valids_count,resto_add,gate_local, cont_v, cont_h) \
     shared(valid_samples,pos_pulso, buffer, pulsos_v_gate, pulsos_h_gate)
     for (int idx_puls = 0; idx_puls < ALL_PULSOS; idx_puls++)
@@ -140,10 +182,23 @@ int main( int argc, char *argv[] )
             pulsos_h_gate[idx_puls][idx_gate] = cont_h / gate_local;
         }
     }
+    return 0;
+}
 
-    free (buffer);
+/**
+ * calculo de la autocorrelacion para cada grado_gate
+ * @param autocorr_v double, matriz en donde se almacena la acurrelacion del canal v
+ * @param autocorr_h double, matriz en donde se almacena la acurrelacion del canal h
+ * @param pulsos_v_gate int, matriz que contiene la pulsos por pulso del canal v
+ * @param pulsos_h_gate int, matriz que contiene la pulsos por pulso del canal h
+ * @return 0
+ */
+int correlacion(double autocorr_v[GRADOS][GATE_MAX],double  autocorr_h[GRADOS][GATE_MAX],
+                double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX])
+{
+    double  sumador_v,
+            sumador_h;
 
-    /* calculo de la autocorrelacion para cada grado_gate  */
     #pragma omp parallel for private(sumador_v, sumador_h) shared(autocorr_v, autocorr_h, pulsos_h_gate, pulsos_v_gate)
     for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
     {
@@ -165,17 +220,6 @@ int main( int argc, char *argv[] )
         }
     }
 
-
-    fileout = fopen("./proccess.outln","wb");
-
-    for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
-    {
-        grado_aux ++;
-        fwrite(&grado_aux, sizeof(int), 1,fileout); /*se escribe en numero de grado al que pertenece los datos */
-        fwrite(autocorr_h[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar h*/
-        fwrite(autocorr_v[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar v*/
-    }
-    fclose(fileout);
     return 0;
 }
 
