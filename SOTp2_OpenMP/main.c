@@ -23,7 +23,7 @@ double modulo(struct complex znum);
 
 int main( int argc, char *argv[] )
 {
-    long    file_size,
+    int     file_size,
             ptr_buffer = 0;
 
     char    *buffer; /* buffer para recuperar los datos */
@@ -73,7 +73,7 @@ int main( int argc, char *argv[] )
 
     /* obtengo el tam del archivo en bytes */
     fseek ( filein, 0L, SEEK_END );
-    file_size = ftell ( filein );
+    file_size = (int)ftell ( filein );
     fseek ( filein, 0, SEEK_SET );
 
     buffer = (char *) malloc((size_t)file_size + 1);
@@ -83,6 +83,7 @@ int main( int argc, char *argv[] )
         fclose (filein);
         exit(EXIT_FAILURE);
     }
+    memset(buffer,0,(size_t) file_size);
 
     /* lectura total del archivo */
     fread(buffer, (size_t)file_size, 1, filein);
