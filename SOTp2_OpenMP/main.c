@@ -63,10 +63,10 @@ int main( int argc, char *argv[] )
 
     filein = fopen ("./pulsos.iq", "rb");
     if(filein == NULL)
-    {
+      {
         perror("# opening file ERROR");
         exit(EXIT_FAILURE);
-    }
+      }
 
     /* obtengo el tam del archivo en bytes */
     fseek ( filein, 0L, SEEK_END );
@@ -75,11 +75,11 @@ int main( int argc, char *argv[] )
 
     buffer = (char *) malloc((size_t)file_size + 1);
     if ( buffer == NULL)
-    {
+      {
         perror("# Memory error malloc! \n" );
         fclose (filein);
         exit(EXIT_FAILURE);
-    }
+      }
     memset(buffer,0,(size_t) file_size);
 
     /* lectura total del archivo */
@@ -87,45 +87,45 @@ int main( int argc, char *argv[] )
     fclose(filein);
 
     for (int i = 0; ptr_buffer < file_size; i++)
-    {
+      {
         pos_pulso[i] = ptr_buffer + sizeof(uint16_t); /* Guarda la posicion en memoria de los pulsos */
         memmove ( &valid_samples[i], &buffer[ptr_buffer], sizeof(uint16_t) ); /* Obtengo cantidad de muestras */
 
         /* actualizo puntero, 4 por F y Q de V y H */
         ptr_buffer += sizeof(uint16_t) + 4 * valid_samples[i] * sizeof(float);
         a_gates[i] =  valid_samples[i] / GATE_MAX; /* Calculo de Gate tentativo para cada pulso */
-    }
+      }
 
     tock = omp_get_wtime();
-    printf("lectura = %lf s\n",tock-start);
+    printf("# Lectura = %lfs\n",tock-start);
     /* procesameiento para obtener la matriz pulso gate */
     tock = omp_get_wtime();
 
     process(valid_samples, pos_pulso, a_gates, pulsos_v_gate, pulsos_h_gate, buffer);
     free (buffer);
 
-    printf("process = %lf s\n",omp_get_wtime() - tock);
+    printf("# Process = %lfs\n",omp_get_wtime() - tock);
 
     /* calculo de la autocorrelacion para cada grado_gate  */
     tock = omp_get_wtime();
 
     correlacion(autocorr_v, autocorr_h ,pulsos_v_gate , pulsos_h_gate);
 
-    printf("correlacion = %lf s\n",omp_get_wtime() - tock);
+    printf("# Correlacion = %lfs\n",omp_get_wtime() - tock);
 
     tock = omp_get_wtime();
 
     fileout = fopen("./proccess.outln","wb");
     for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
-    {
+      {
         grado_aux ++;
         fwrite(&grado_aux, sizeof(int), 1,fileout); /*se escribe en numero de grado al que pertenece los datos */
         fwrite(autocorr_h[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar h*/
         fwrite(autocorr_v[idx_grado], sizeof(double), GATE_MAX, fileout); /*gates del canar v*/
-    }
+      }
     fclose(fileout);
-    printf("Escitura = %lf s\n",omp_get_wtime() - tock);
-    printf("total = %lf s\n",omp_get_wtime() - start);
+    printf("# Escitura = %lfs\n",omp_get_wtime() - tock);
+    printf("# Total = %lfs\n",omp_get_wtime() - start);
     return 0;
 }
 
@@ -157,20 +157,20 @@ int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_
     #pragma omp parallel for private(resto, ptr_buffer,valids_count,resto_add,gate_local, cont_v, cont_h) \
     shared(valid_samples,pos_pulso, buffer, pulsos_v_gate, pulsos_h_gate)
     for (int idx_puls = 0; idx_puls < ALL_PULSOS; idx_puls++)
-    {
+      {
         resto = valid_samples[idx_puls] % GATE_MAX; /* calculo el resto de cada gate */
         ptr_buffer = pos_pulso[idx_puls];
         valids_count = 0; /* contador de muestras */
         resto_add = 0;
 
         for (int  idx_gate = 0; idx_gate < GATE_MAX ; idx_gate++)
-        {
+          {
             resto_add += resto; /* acumula el resto */
             if (resto_add  >= GATE_MAX) /* si la acumulado es mayor al divisor se incremeta la cantidad */
-            {                           /* de muestras a tomar */
+              {                           /* de muestras a tomar */
                 gate_local = a_gates[idx_puls] + 1;
                 resto_add -= GATE_MAX;
-            }
+              }
             else /* se mantiene el nuemro de muestras tentativos */
                 gate_local = a_gates[idx_puls];
 
@@ -178,23 +178,23 @@ int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_
             cont_h = 0;
 
             for (int i = 0; i < gate_local && valids_count < valid_samples[idx_puls]; i++)
-            {
+              {
                 memmove(&muestra_z, &buffer[ptr_buffer], sizeof(struct complex)); /* obtencion de muestra */
                 cont_v += sqrt(pow(muestra_z.phas,2) + pow(muestra_z.quad, 2)); /*modulo para el canal v*/
 
                 memmove(&muestra_z,
                         &buffer[ptr_buffer + valid_samples[idx_puls] * sizeof(struct complex)],
                         sizeof(struct complex));
-                cont_h += sqrt(pow(muestra_z.phas,2) + pow(muestra_z.quad, 2)); /*se acumulan muestras en modulo para el canal h*/
+                cont_h += sqrt(pow(muestra_z.phas,2) + pow(muestra_z.quad, 2)); /* modulo para el canal h*/
 
                 ptr_buffer += sizeof(struct complex);
                 valids_count++;
-            }
+              }
             /* obtencion de gates por pulso (media aritmetica) */
             pulsos_v_gate[idx_puls][idx_gate] = cont_v / gate_local;
             pulsos_h_gate[idx_puls][idx_gate] = cont_h / gate_local;
-        }
-    }
+          }
+      }
     return 0;
 }
 
@@ -214,24 +214,24 @@ int correlacion(double autocorr_v[GRADOS][GATE_MAX],double  autocorr_h[GRADOS][G
 
     #pragma omp parallel for private(sumador_v, sumador_h) shared(autocorr_v, autocorr_h, pulsos_h_gate, pulsos_v_gate)
     for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
-    {
+      {
         for ( int idx_gate = 0; idx_gate < GATE_MAX  ; idx_gate++ )
-        {
+          {
             sumador_v = 0;
             sumador_h = 0;
 
             for ( int idx_pulso = 0; idx_pulso < (PULSOS - 1) ; idx_pulso++ )
-            {
+              {
                 sumador_v += pulsos_v_gate[(PULSOS * idx_grado) + idx_pulso][idx_gate] *
                              pulsos_v_gate[(PULSOS * idx_grado) + idx_pulso + 1][idx_gate];
 
                 sumador_h += pulsos_h_gate[(PULSOS * idx_grado) + idx_pulso][idx_gate] *
                              pulsos_h_gate[(PULSOS * idx_grado) + idx_pulso + 1][idx_gate];
-            }
+              }
             autocorr_v[idx_grado][idx_gate] = sumador_v / 100.0;
             autocorr_h[idx_grado][idx_gate] = sumador_h / 100.0;
-        }
-    }
+          }
+      }
 
     return 0;
 }
