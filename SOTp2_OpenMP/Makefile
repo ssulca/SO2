@@ -1,4 +1,4 @@
-CC = gcc
+CC = gcc-6
 
 CFLAGS = -fopenmp -Wall -Werror -pedantic
 LFLAGS = -lm -fopenmp

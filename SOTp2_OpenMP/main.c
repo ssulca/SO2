@@ -149,13 +149,13 @@ int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_
         valids_count,
         ptr_buffer = 0;
 
-    double  cont_v,
-            cont_h;
+    double  cont_v = 0,
+            cont_h = 0;
 
     struct complex muestra_z; /* estructura para obtener los datos de una muestra */
 
-    #pragma omp parallel for private(resto, ptr_buffer,valids_count,resto_add,gate_local, cont_v, cont_h) \
-    shared(valid_samples,pos_pulso, buffer, pulsos_v_gate, pulsos_h_gate)
+    #pragma omp parallel for private(resto, ptr_buffer,valids_count,resto_add,gate_local) \
+    reduction(+: cont_v, cont_h)
     for (int idx_puls = 0; idx_puls < ALL_PULSOS; idx_puls++)
       {
         resto = valid_samples[idx_puls] % GATE_MAX; /* calculo el resto de cada gate */
@@ -209,10 +209,10 @@ int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_
 int correlacion(double autocorr_v[GRADOS][GATE_MAX],double  autocorr_h[GRADOS][GATE_MAX],
                 double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX])
 {
-    double  sumador_v,
-            sumador_h;
+    double  sumador_v = 0,
+            sumador_h = 0;
 
-    #pragma omp parallel for private(sumador_v, sumador_h) shared(autocorr_v, autocorr_h, pulsos_h_gate, pulsos_v_gate)
+    #pragma omp parallel for reduction(+:sumador_v, sumador_h)
     for (int idx_grado = 0; idx_grado < GRADOS; idx_grado++)
       {
         for ( int idx_gate = 0; idx_gate < GATE_MAX  ; idx_gate++ )
