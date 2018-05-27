@@ -73,15 +73,13 @@ int main( int argc, char *argv[] )
     file_size = (int)ftell ( filein );
     fseek ( filein, 0, SEEK_SET );
 
-    buffer = (char *) malloc((size_t)file_size + 1);
+    buffer = (char *) calloc(1, (size_t)file_size + 1);
     if ( buffer == NULL)
       {
         perror("# Memory error malloc! \n" );
         fclose (filein);
         exit(EXIT_FAILURE);
       }
-    memset(buffer,0,(size_t) file_size);
-
     /* lectura total del archivo */
     fread(buffer, (size_t)file_size, 1, filein);
     fclose(filein);
@@ -143,10 +141,10 @@ int process(const uint16_t *valid_samples, const int * pos_pulso, const int * a_
             double pulsos_v_gate[ALL_PULSOS][GATE_MAX], double pulsos_h_gate[ALL_PULSOS][GATE_MAX],
             const char * buffer)
 {
-    int resto,
-        resto_add,
-        gate_local,
-        valids_count,
+    int resto = 0,
+        resto_add = 0,
+        gate_local = 0,
+        valids_count = 0,
         ptr_buffer = 0;
 
     double  cont_v = 0,
@@ -228,8 +226,8 @@ int correlacion(double autocorr_v[GRADOS][GATE_MAX],double  autocorr_h[GRADOS][G
                 sumador_h += pulsos_h_gate[(PULSOS * idx_grado) + idx_pulso][idx_gate] *
                              pulsos_h_gate[(PULSOS * idx_grado) + idx_pulso + 1][idx_gate];
               }
-            autocorr_v[idx_grado][idx_gate] = sumador_v / 100.0;
-            autocorr_h[idx_grado][idx_gate] = sumador_h / 100.0;
+            autocorr_v[idx_grado][idx_gate] = sumador_v / PULSOS;
+            autocorr_h[idx_grado][idx_gate] = sumador_h / PULSOS;
           }
       }
 
