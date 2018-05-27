@@ -15,7 +15,7 @@
 
 #define BUFF_MAX 1024
 #define BUFFUDP_MAX 2048
-#define PORT_UDP 5000
+#define PORT_UDP 9000
 #define PORT_TCP 6020
 
 int authentication(int newsockfd, char* buffer, char* pass);
@@ -103,7 +103,7 @@ int main( int argc, char *argv[] )
 
             if (authentication(newsockfd, buffer, pass)<0)
               {
-                printf("coexion succes\n");
+                printf("# conexion rechazada.\n");
                 exit(1);
               }
 
@@ -127,7 +127,7 @@ int main( int argc, char *argv[] )
             pid = fork();
             if (pid < 0)
               {
-                printf("Fork error \n");
+                printf("# Fork error. \n");
                 exit( EXIT_FAILURE);
               }
             if (pid == 0 ) /* proceso hijo ejecuta bash*/
@@ -144,7 +144,7 @@ int main( int argc, char *argv[] )
 
                 /* ejecucion de bash */
                 execvp(argv_h[0], argv_h);
-                printf("Exec error \n");
+                printf("# Exec error. \n");
 
                 close( tob[0] );
                 close( formb[1] );
@@ -213,7 +213,7 @@ int main( int argc, char *argv[] )
           }
         else /* Proceso padre del socket*/
           {
-            printf( "SERVIDOR: Nuevo cliente, que atiende el proceso hijo: %d\n", pid);
+            printf( "# SERVIDOR: Nuevo cliente, que atiende el proceso hijo: %d.\n", pid);
             close(newsockfd);
           }
       }
@@ -346,7 +346,6 @@ int downolad(char *pathtk, char *ip)
     strcpy(path,pathtk);
     strcat(path, "/");
     strcat(path, buffer);
-    printf("path %s\n",path);
 
     fin =fopen(path,"rb");
     if(fin == NULL){
@@ -390,7 +389,7 @@ int downolad(char *pathtk, char *ip)
         exit(EXIT_FAILURE);
       }
     fclose(fin);
-    printf("fin descarga\n");
+    printf("# fin descarga.\n");
     close(sockfd);
     return 0;
 }

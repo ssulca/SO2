@@ -19,7 +19,7 @@
 #define PORT_MAX 6
 #define PASS_MAX 16
 #define BUFFUDP_MAX 2048
-#define PORT_UDP 5000
+#define PORT_UDP 9000
 
 int command(char* u, char* i, char* p);
 int fun_sock(char* ip, char* user,char* port);
@@ -140,7 +140,7 @@ int fun_sock(char* ip, char* user,char* port)
 
 
     /* convierto numero entero*/
-    puerto = atoi(port);
+    puerto = (int) strtol(port,NULL,10);
     if (puerto == 0)
       {
         perror("Error al convertir el puerto");
@@ -158,7 +158,7 @@ int fun_sock(char* ip, char* user,char* port)
 
     if (server == NULL)
       {
-        fprintf( stderr,"Error, no existe el host\n" );
+        fprintf( stderr,"# Error, no existe el host.\n" );
         return -1;
       }
 
