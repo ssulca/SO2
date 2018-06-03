@@ -31,7 +31,6 @@ int main( int argc, char *argv[] )
 {
     int terminar = 0;
 
-    /*nuevos varaibles */
     char user[USER_MAX];
     char ip[IP_MAX];
     char port[PORT_MAX];
@@ -301,6 +300,7 @@ int authentication(int sockfd, char* buffer, char* user)
 
 /**
  * obtiene la contraseña del prompt ocultado la misma.
+ * link codigo original https://stackoverflow.com/questions/1754004/how-to-mask-password-in-c
  * @param buffer char* buffer obtiene la contraseña del prompt
  * @return 0 , si es obtiene la contraseña , error en caso contrario.
  */
@@ -313,18 +313,21 @@ int get_pass( char *buffer)
     int readbytes = 0;
 
     /*obtiene los parámetros asociados referidos stdin  y
-     * los almacena en la estructura termios */
+     * los almacena en la estructura termios  guarda el stado de un FD*/
     tcgetattr( STDIN_FILENO, &tty_orig );
     struct termios  tty_work = tty_orig;
 
     memset(passwd,'\0',PASS_MAX);
 
     puts("# password:");
-    tty_work.c_lflag &= ~( ECHO | ICANON );  /* | ISIG )*/
+    /*encho de entrada de characteres y deshabilito la entrada canoncia. */
+    tty_work.c_lflag &= ~( ECHO | ICANON );
+    /* VMIN es un recuento de caracteres que va de 0 a 255 caracteres,
+     * VTIME es el tiempo medido en intervalos si esta en cero esta desactivado */
     tty_work.c_cc[ VMIN ]  = 1;
     tty_work.c_cc[ VTIME ] = 0;
 
-    /* establece los parámetros asociados con el prompt  */
+    /* setea el estado de stdin a work y espera que termine todas las escirturas en stdin  */
     tcsetattr( STDIN_FILENO, TCSAFLUSH, &tty_work );
 
     while (1)
@@ -371,7 +374,6 @@ int download (char* name)
     socklen_t   size_direccion;
     uint16_t    puerto = PORT_UDP;
 
-    //unsigned  int fileSize;
     sockfd = socket(AF_INET, SOCK_DGRAM, 0);
     if (sockfd < 0)
       {
