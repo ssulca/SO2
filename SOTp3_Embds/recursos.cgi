@@ -31,10 +31,8 @@ open $h, "/proc/uptime";
 {
     my @info = <$h>;
     close $h;
+    @info = split(/ /,$info[0]);
     $uptime = $info[0];
-    @info = split(/ /,$uptime);
-    $uptime = $info[0];
-
 }
 
 $ram = int($ram / 1024 / 1024 / 1024 + 0.5);
