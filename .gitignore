@@ -15,3 +15,6 @@ CMakeLists.txt
 #carpetas auxiliares
 sockets/
 prueba_file.c
+
+#perl
+.metadata/
