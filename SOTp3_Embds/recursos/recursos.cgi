@@ -7,12 +7,11 @@ use List::Util 'first';
 my $cpu = 'Unknown';
 my $cpus = 0;
 my $ram = 0;
-my $datestring = '';
+my $date = '';
 my $uptime = '';
 
 open my $h, "/proc/cpuinfo";
-if ($h)
-{
+if ($h) {
     my @info = <$h>;
     close $h;
     $cpus = scalar(map /^processor/, @info);
@@ -20,28 +19,22 @@ if ($h)
     $cpu = $1 if ($strCPU && $strCPU =~ /:\s+(.*)/);
 }
 open $h, "/proc/meminfo";
-if ($h)
-{
+if ($h) {
     my @info = <$h>;
     close $h;
     my $strRAM = first { /^MemTotal/ } @info;
     $ram = $1 * 1024 if ($strRAM && $strRAM =~ /:\s+(\d+)/);
 }
 open $h, "/proc/uptime";
-{
+if ($h) {
     my @info = <$h>;
     close $h;
     @info = split(/ /,$info[0]);
     $uptime = $info[0];
 }
 
-$ram = int($ram / 1024 / 1024 / 1024 + 0.5);
-$datestring = localtime();
-print "CPU: '$cpu'\n";
-print "CPU nucleos: $cpus\n";
-print "RAM: $ram GB\n";
-print "DATE: $datestring\n";
-print "UPTIME: $uptime segundos \n";
+$ram = int($ram / 1024 / 1024 / 1024 + 0.5); # expresarlo en GB
+$date = localtime(); # date
 
 print <<EOF;
 <html><head><title>Recursos</title></head>
@@ -56,10 +49,10 @@ print <<EOF;
 <FONT FACE="courier new"> $cpus </FONT>
 
 <h2>RAM: </h2>
-<FONT FACE="courier new"> $ram BG </FONT>
+<FONT FACE="courier new"> $ram GB </FONT>
 
 <h2>DATE: </h2>
-<FONT FACE="courier new"> $datestring </FONT>
+<FONT FACE="courier new"> $date </FONT>
 
 <h2>UPTIME: </h2>
 <FONT FACE="courier new"> $uptime segundos </FONT>
