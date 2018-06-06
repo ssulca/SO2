@@ -1,8 +1,14 @@
-### Prerequisites
+## Raspi Prerquistes
+### Prerequisites PERL
 
-What things you need to install the software and how to install them
-
+Uso de la libreria CGI::
 ```
-
 sudo apt-get install libcgi-session-perl
+```
+### compilacion dem modulos del kernel
+Para compilar modulos del kernel en Raspbian
+```
+sudo apt-get install raspberrypi-kernel-headers 
+sudo apt-get install build-essential
+sudo apt-get install dkms
 ```
