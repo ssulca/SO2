@@ -1,7 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
-use warnings FATAL => 'all';
+use warnings;
 use CGI ':standard';
 use IPC::Open3;
 
@@ -42,12 +42,14 @@ print "$remove_print"; # mensajes de remove module
 
 print start_form; # Formulario
 # seccion upload & load
+print h3('Load Module');
 print label('Load Module');
 print submit('load_btn','Load Module');
+print h3('Upload Module');
 print filefield('mod_file','startig value',80,80);
-print '<br><br>';
 
 # seccion para remover modulos
+print h3('Remove Module');
 print label('Remove module');
 print textfield(-name=>'rm_mod',-id=>'rm_mod',);
 print submit('remove_btn','Remove Module');
