@@ -32,8 +32,7 @@ print h1('Modulos');
 
 print h2('Modululos Actuales');
 
-system("lsmod") == 0
-    or die "system call failed";
+print pre(`lsmod`);
 
 # gestion de modulos
 print h2('Upload & Load Module');
