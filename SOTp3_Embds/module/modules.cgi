@@ -15,14 +15,16 @@ my $remove_print='';
 my $filename = '';
 
 # si los campos no estan vacios se remueve o carga;
-if (defined param('load_btn')) {
-    load_module();
-}
-if(defined param('remove_btn')){
-    remove_module();
+if (defined param('load_btn'))
+{
+    upload_load();
 }
 
-# cabecera html
+if(defined param('remove_btn'))
+{
+    remove();
+}
+
 print header,
     start_html('Modules_RPI');
 
@@ -30,8 +32,8 @@ print h1('Modulos');
 
 print h2('Modululos Actuales');
 
-# show system modules
-print pre(`lsmod`);
+system("lsmod") == 0
+    or die "system call failed";
 
 # gestion de modulos
 print h2('Upload & Load Module');
@@ -50,9 +52,9 @@ print h3('Upload Module');
 
 # fuente http://perldoc.perl.org/CGI.html
 print filefield(-name=>'mod_file',
--default=>'startig value',
--size=>50,
--maxlength=>80);
+                -default=>'startig value',
+                -size=>50,
+                -maxlength=>80);
 
 # seccion para remover modulos
 print h3('Remove Module');
@@ -67,21 +69,26 @@ print end_html(); # Final de pagina
 
 # Carga el kernel
 
-sub load_module{
+sub upload_load
+{
     my $file_handler = upload('mod_file');  # Carga un handler al recibir archivo
     my $ls;
-
-    if(defined $file_handler){ # verifica si se subio un archivo (verif handler)
+    # undef may be returned if it's not a valid file handle
+    if(defined $file_handler) # verifica si se subio un archivo (verif handler)
+    {
         $filename = param('mod_file'); # get file name
-		if($filename =~ m/\.ko$/){ # verifica el archivo
+
+		if($filename =~ m/\.ko$/) # verifica archivo .ko
+        {
             my $bytesread;
             my $buffer;
 
-            # save file
+            # Upgrade the handle to one compatible with IO::Handle:
             my $handler = $file_handler->handle;
 
             open (OUTFILE ,'>>','./modules/$filename');
-            while($bytesread = $handler->read ($buffer,1024)){
+            while($bytesread = $handler->read ($buffer,1024)) # save file
+            {
                 print OUTFILE $buffer;
             }
             # carga el modulo en el kernel
@@ -100,20 +107,24 @@ sub load_module{
             waitpid($pidl, 0);
 
         }
-        else{
+        else
+        {
             $load_print .= p("module file unrecognized $filename");
         }
     }
-    else{
+    else
+    {
         $load_print .= p('no hay modulos para cargar');
     }
 }
 
 # elimina el moduo de kernel
-sub remove_module{
+sub remove
+{
     my $rm_mod = param('rm_mod'); # load name module to remove!
 
-    if(defined $rm_mod and ($rm_mod ne "")){ # verifica el campo
+    if(defined $rm_mod and ($rm_mod ne "")) # verifica el campo
+    {
         my $ls = '';
         local (*IN,*OUT);
         my $pidr = open3(\*IN, \*OUT ,\*OUT ,"./recursos/exec_rmmod $rm_mod");

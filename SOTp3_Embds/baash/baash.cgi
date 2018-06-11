@@ -4,13 +4,13 @@ use strict;
 use CGI ':standard';
 # La funcion Open3 de la libreria IPC permite el manejo de pipes
 use IPC::Open3;
-
 $ENV{PATH} = '/sbin:/usr/bin:/bin:/usr/sbin/'; # para la ejecucion del bash
-# inicio de la pagina html
+
+
 print header,
       start_html('web terminal');
 
-local (*IN,*OUT); # pipes
+local (*IN,*OUT);
 
 my $pid = open3(\*IN, \*OUT ,0,'./red/bash');
 my $out = '';
