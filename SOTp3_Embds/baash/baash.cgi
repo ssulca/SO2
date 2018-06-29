@@ -12,9 +12,9 @@ print header,
 
 local (*IN,*OUT);
 
-my $pid = open3(\*IN, \*OUT ,0,'./red/bash');
 my $out = '';
 my $cmd ;
+my $pid = open3(\*IN, \*OUT ,\*OUT,'./rec/bash');
 
 print h1("Baash");
 $cmd = param("cmd"); # toma el comando enviado en el formulario

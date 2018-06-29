@@ -4,7 +4,7 @@ use warnings;
 use strict;
 use List::Util 'first';
 
-my $cpu = 'Unknown';
+my $cpu = ' ';
 my $cpus = 0;
 my $ram = 0;
 my $date = '';
@@ -23,7 +23,7 @@ if ($h) {
     my @info = <$h>;
     close $h;
     my $strRAM = first { /^MemTotal/ } @info;
-    $ram = $1 * 1024 if ($strRAM && $strRAM =~ /:\s+(\d+)/);
+    $ram = $1 if ($strRAM && $strRAM =~ /:\s+(\d+)/);
 }
 open $h, "/proc/uptime";
 if ($h) {
@@ -33,7 +33,7 @@ if ($h) {
     $uptime = $info[0];
 }
 
-$ram = int($ram / 1024 / 1024 / 1024 + 0.5); # expresarlo en GB
+$ram = int($ram / 1024 / 1024 + 0.5); # expresarlo en GB
 $date = localtime(); # date
 
 print <<EOF;

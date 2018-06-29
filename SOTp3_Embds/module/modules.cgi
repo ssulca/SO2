@@ -5,9 +5,6 @@ use warnings;
 use CGI ':standard';
 use IPC::Open3;
 
-####### def FILES ######
-# OUTFILE :
-####### end def ######
 
 # definicion variables globales
 my $load_print='';
@@ -32,6 +29,7 @@ print h1('Modulos');
 
 print h2('Modululos Actuales');
 
+# El texto en este elemento se muestra en una fuente fija
 print pre(`lsmod`);
 
 # gestion de modulos
